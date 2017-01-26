@@ -10,7 +10,6 @@
  */
 
 THREE.VREffect = function( renderer, onError ) {
-
 	var vrDisplay, vrDisplays;
 	var eyeTranslationL = new THREE.Vector3();
 	var eyeTranslationR = new THREE.Vector3();
@@ -246,8 +245,8 @@ THREE.VREffect = function( renderer, onError ) {
 			var eyeParamsL = vrDisplay.getEyeParameters( 'left' );
 			var eyeParamsR = vrDisplay.getEyeParameters( 'right' );
 
-			eyeTranslationL.fromArray( eyeParamsL.offset );
-			eyeTranslationR.fromArray( eyeParamsR.offset );
+			eyeTranslationL.fromArray( eyeParamsL.offset);
+			eyeTranslationR.fromArray( eyeParamsR.offset);
 
 			if ( Array.isArray( scene ) ) {
 
@@ -310,8 +309,9 @@ THREE.VREffect = function( renderer, onError ) {
 			camera.matrixWorld.decompose( cameraR.position, cameraR.quaternion, cameraR.scale );
 
 			var scale = this.scale;
-			cameraL.translateOnAxis( eyeTranslationL, scale );
-			cameraR.translateOnAxis( eyeTranslationR, scale );
+			console.log(cameraL.scale);
+			cameraL.translateOnAxis( eyeTranslationL, cameraL.scale.x );
+			cameraR.translateOnAxis( eyeTranslationR, cameraR.scale.x );
 
 			if ( vrDisplay.getFrameData ) {
 
@@ -475,3 +475,5 @@ THREE.VREffect = function( renderer, onError ) {
 	}
 
 };
+
+window.scale = 1.0;

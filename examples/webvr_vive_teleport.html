@@ -25,11 +25,175 @@
 		<script src="js/effects/VREffect.js"></script>
 		<script src="js/vr/ViveController.js"></script>
 		<script src="js/vr/WebVR.js"></script>
+		<script src="js/teleport/RayCurve.js"></script>
+		<script src="js/teleport/ParabolicCurve.js"></script>
 
 		<script src="js/loaders/OBJLoader.js"></script>
 
 		<script>
-			if ( WEBVR.isAvailable() === false ) {
+
+		THREE.TeleportController = function ( id, hitObject ) {
+
+			this.data = {
+		    defaultEntityColor: '#99ff99',
+		    defaultEntityRadius: 0.25,
+		    hitColor: '#99ff99',
+		    missColor: '#ff0000',
+		    numberPoints: 30,
+		    maxDistance: 5,
+		    lineWidth: 0.025,
+		    normal: new THREE.Vector3(0,1,0),
+		    angleThreshold: 45,
+		    shootingSpeed: 5
+		  },
+
+			this.hit = false;
+			this.active = false;
+	    this.hitPoint = new THREE.Vector3();
+	    this.hit = false;
+	    this.prevHeightDiff = 0;
+	    this.referenceNormal = new THREE.Vector3().copy(this.data.normal);
+	    this.missColor = new THREE.Color();
+	    this.hitColor = new THREE.Color();
+	    this.raycaster = new THREE.Raycaster();
+
+			// Floor
+			var geometry = new THREE.BoxBufferGeometry(100, 0.5, 100);
+	    geometry.applyMatrix( new THREE.Matrix4().makeTranslation( 0, -0.25, 0 ) );
+	    var material = new THREE.MeshBasicMaterial({color: 0xffff00});
+	    this.floor = new THREE.Mesh( geometry, material );
+
+			var geometry = new THREE.SphereBufferGeometry( 0.1, 32, 32 );
+			var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
+			this.hitObject = new THREE.Mesh( geometry, material );
+			scene.add( this.hitObject );
+
+			this.line = new THREE.RayCurve(this.data.numberPoints, this.data.lineWidth);
+			scene.add(this.line.mesh);
+
+			THREE.ViveController.call( this, id );
+			function onButtonDown () {
+				this.active = true;
+			}
+
+			function onButtonUp () {
+				if (!this.active) { return; }
+			    // Jump!
+
+			    // Hide the hit point and the curve
+			    this.active = false;
+			    // this.hitObject.setAttribute('visible', false);
+			    // this.teleportEntity.setAttribute('visible', false);
+
+			    if (!this.hit) {
+			      // Button released but not hit point
+			      return;
+			    }
+
+			    // @todo Create this aux vectors outside
+/*
+					var cameraEl = this.el.sceneEl.camera.el;
+			    var camPosition = new THREE.Vector3().copy(cameraEl.getAttribute('position'));
+
+			    var newCamPositionY = camPosition.y + this.hitPoint.y - this.prevHeightDiff;
+			    var newCamPosition = new THREE.Vector3(this.hitPoint.x, newCamPositionY, this.hitPoint.z);
+			    this.prevHeightDiff = this.hitPoint.y;
+
+			    cameraEl.setAttribute('position', newCamPosition);
+
+			    // Find the hands and move them proportionally
+			    var hands = document.querySelectorAll('a-entity[tracked-controls]');
+			    for (var i = 0; i < hands.length; i++) {
+			      var position = hands[ i ].getAttribute('position');
+			      var pos = new THREE.Vector3().copy(position);
+			      var diff = camPosition.clone().sub(pos);
+			      var newPosition = newCamPosition.clone().sub(diff);
+			      hands[ i ].setAttribute('position', newPosition);
+			    }
+*/
+			}
+
+			this.addEventListener( 'thumbpadup', onButtonUp );
+			this.addEventListener( 'thumbpaddown', onButtonDown );
+
+		};
+		THREE.TeleportController.prototype = Object.create( THREE.ViveController.prototype );
+		THREE.TeleportController.prototype.constructor = THREE.TeleportController;
+
+		THREE.TeleportController.prototype.isValidNormalsAngle = function (collisionNormal) {
+	    var angleNormals = this.referenceNormal.angleTo(collisionNormal);
+	    return (THREE.Math.RAD2DEG * angleNormals <= this.data.angleThreshold);
+	  };
+
+		THREE.TeleportController.prototype.tick = (function() {
+			var p0 = new THREE.Vector3();
+    	var quaternion = new THREE.Quaternion();
+    	var translation = new THREE.Vector3();
+    	var scale = new THREE.Vector3();
+    	var shootAngle = new THREE.Vector3();
+    	var lastNext = new THREE.Vector3();
+
+    	return function (time, delta) {
+      if (!this.active) { return; }
+
+      var matrixWorld = this.matrixWorld;
+      matrixWorld.decompose(translation, quaternion, scale);
+
+      var v0 = shootAngle.set(0, 0, -1)
+        .applyQuaternion(quaternion)
+        .multiplyScalar(this.data.shootingSpeed);
+      var g = -9.8;
+      var a = new THREE.Vector3(0, g, 0);
+      p0.copy(this.position);
+
+      var last = p0.clone();
+      var next;
+
+      // Set default status as non-hit
+
+			this.line.mesh.visible = true;
+      this.line.material.color.set(this.missColor);
+      this.hitObject.visible = false;
+      this.hit = false;
+
+      for (var i = 0; i < this.line.numPoints; i++) {
+        var t = i / (this.line.numPoints - 1);
+        next = THREE.parabolicCurve(p0, v0, a, t);
+        // Update the raycaster with the length of the current segment last->next
+        var dirLastNext = lastNext.copy(next).sub(last).normalize();
+        this.raycaster.far = dirLastNext.length();
+        this.raycaster.set(last, dirLastNext);
+
+        // Check intersection with the floor
+        var intersects = this.raycaster.intersectObject(this.floor, true);
+
+				if (intersects.length > 0 && !this.hit && this.isValidNormalsAngle(intersects[0].face.normal)) {
+					var point = intersects[0].point;
+
+          this.line.material.color.set(this.hitColor);
+          this.hitObject.position.copy(point);
+          this.hitObject.visible = true;
+
+          this.hit = true;
+          this.hitPoint.copy(intersects[0].point);
+
+          // If hit, just fill the rest of the points with the hit point and break the loop
+          for (var j = i; j < this.line.numPoints; j++) {
+            this.line.setPoint(j, this.hitPoint);
+          }
+          break;
+        } else {
+          this.line.setPoint(i, next);
+        }
+        last.copy(next);
+      }
+      this.line.update();
+    };
+  })();
+
+
+
+			if ( WEBVR.isLatestAvailable() === false ) {
 
 				document.body.appendChild( WEBVR.getMessage() );
 
@@ -169,11 +333,13 @@
 
 				// controllers
 
-				controller1 = new THREE.ViveController( 0 );
+
+				controller1 = new THREE.TeleportController( 0 );
+
 				controller1.standingMatrix = controls.getStandingMatrix();
 				scene.add( controller1 );
 
-				controller2 = new THREE.ViveController( 1 );
+				controller2 = new THREE.TeleportController( 1 );
 				controller2.standingMatrix = controls.getStandingMatrix();
 				scene.add( controller2 );
 
@@ -194,6 +360,7 @@
 				} );
 
 				effect = new THREE.VREffect( renderer );
+
 				if ( WEBVR.isAvailable() === true ) {
 
 					document.body.appendChild( WEBVR.getButton( effect ) );
@@ -224,12 +391,49 @@
 
 			}
 
+			function handleController( controller ) {
+
+				controller.update();
+				controller.tick();
+				if ( controller.getButtonState( 'touchpad' ) ) {
+					console.log('asdfasdf');
+				}
+//				var pivot = controller.getObjectByName( 'pivot' );
+/*
+				if ( pivot ) {
+
+					pivot.material.color.copy( controller.getColor() );
+
+					var matrix = pivot.matrixWorld;
+
+					var point1 = controller.userData.points[ 0 ];
+					var point2 = controller.userData.points[ 1 ];
+
+					var matrix1 = controller.userData.matrices[ 0 ];
+					var matrix2 = controller.userData.matrices[ 1 ];
+
+					point1.setFromMatrixPosition( matrix );
+					matrix1.lookAt( point2, point1, up );
+
+					if ( controller.getButtonState( 'trigger' ) ) {
+
+						stroke( controller, point1, point2, matrix1, matrix2 );
+
+					}
+
+					point2.copy( point1 );
+					matrix2.copy( matrix1 );
+*/
+				//}
+
+			}
+
 			function render() {
 
 				var delta = clock.getDelta() * 60;
 
-				controller1.update();
-				controller2.update();
+				handleController( controller1 );
+				handleController( controller2 );
 
 				controls.update();
 
