@@ -9,7 +9,7 @@
 		<style>
 			body {
 				font-family: Monospace;
-				background-color: #999;
+				background-color: #101010;
 				color: #fff;
 				margin: 0px;
 				overflow: hidden;
@@ -19,59 +19,14 @@
 			}
 		</style>
 	</head>
-
-
 	<body>
 
 		<script src="../build/three.js"></script>
 
 		<script src="js/vr/DaydreamController.js"></script>
 		<script src="js/vr/WebVR.js"></script>
-		<script src="webgl-debug.js"></script>
-
-		<script id="vertexShader" type="x-shader/x-vertex">
-			#extension GL_OVR_multiview2 : require
-			#define VIEW_ID gl_ViewID_OVR
-			layout(num_views=2) in;
-
-			uniform mat4 leftProjectionMatrix;
-	    uniform mat4 leftViewMatrix;
-	    uniform mat4 rightProjectionMatrix;
-	    uniform mat4 rightViewMatrix;
-			uniform mat4 modelMatrix;
-			uniform mat4 modelViewMatrix;
-
-			in vec3 position;
-
-			void main()	{
-
-				mat4 m = VIEW_ID == 0u ? (leftProjectionMatrix * leftViewMatrix) : (rightProjectionMatrix * rightViewMatrix);
-				m = modelViewMatrix * m;
-				gl_Position = m * vec4( position, 1.0 );
-
-			}
-
-		</script>
-	<!-- #version 300 es -->
-		<script id="fragmentShader" type="x-shader/x-fragment">
-			precision mediump float;
-			// out vec4 out_color;
-			uniform vec3 color;
-
-			void main()	{
-
-				gl_FragColor = vec4( color, 1.0 );
-
-			}
-
-		</script>
 
 		<script>
-
-			WEBVR.attributes = {
-				depth: true,
-				multiview: true
-			};
 
 			WEBVR.checkAvailability().catch( function( message ) {
 
@@ -89,6 +44,8 @@
 
 			var room;
 
+			var INTERSECTED;
+
 			init();
 			animate();
 
@@ -104,37 +61,21 @@
 				info.style.textAlign = 'center';
 				info.innerHTML = '<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> webvr - daydream';
 				container.appendChild( info );
-/*
+
 				var background = new THREE.CubeTextureLoader()
 					.setPath( 'textures/cube/MilkyWay/' )
 					.load( [ 'dark-s_px.jpg', 'dark-s_nx.jpg', 'dark-s_py.jpg', 'dark-s_ny.jpg', 'dark-s_pz.jpg', 'dark-s_nz.jpg' ] );
 				background.format = THREE.RGBFormat;
-*/
+
 				scene = new THREE.Scene();
-	//			scene.background = background;
+				scene.background = background;
 
 				camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 0.1, 10 );
-/*
-				var material = new THREE.RawShaderMaterial( {
-
-					uniforms: {
-						time: { value: 1.0 }
-					},
-					vertexShader: document.getElementById( 'vertexShader' ).textContent,
-					fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
-					side: THREE.DoubleSide,
-					transparent: true
-
-				} );
 
 				room = new THREE.Mesh(
 					new THREE.BoxGeometry( 6, 6, 6, 8, 8, 8 ),
-					material
+					new THREE.MeshBasicMaterial( { color: 0x808080, wireframe: true } )
 				);
-				scene.add( room );
-*/
-
-				room = new THREE.Group();
 				scene.add( room );
 
 				scene.add( new THREE.HemisphereLight( 0x606060, 0x404040 ) );
@@ -144,35 +85,15 @@
 				scene.add( light );
 
 				var geometry = new THREE.BoxGeometry( 0.15, 0.15, 0.15 );
-				var geometry = new THREE.SphereGeometry( 0.2, 32, 32 );
 
 				for ( var i = 0; i < 200; i ++ ) {
 
-					var material = new THREE.RawShaderMaterial( {
-						uniforms: {
-							leftProjectionMatrix: { value: new THREE.Matrix4() },
-					    leftViewMatrix: { value: new THREE.Matrix4() },
-					    rightProjectionMatrix: { value: new THREE.Matrix4() },
-					    rightViewMatrix: { value: new THREE.Matrix4() },
-							modelMatrix: { value: new THREE.Matrix4() },
-							modelViewMatrix: { value: new THREE.Matrix4() },
-							color: { value: new THREE.Color( Math.random() * 0xffffff ) }
-						},
-						vertexShader: document.getElementById( 'vertexShader' ).textContent,
-						fragmentShader: document.getElementById( 'fragmentShader' ).textContent
-
-					} );
-					//var material = new THREE.MeshBasicMaterial( { color: Math.random() * 0xffffff } );
-					var material = new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } );
-					//var material = new THREE.MeshStandardMaterial( { color: Math.random() * 0xffffff, roughness: Math.random(), metalness: Math.random() } );
-
-
-					var object = new THREE.Mesh( geometry, material );
+					var object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
 
 					object.position.x = Math.random() * 4 - 2;
 					object.position.y = Math.random() * 4 - 2;
 					object.position.z = Math.random() * 4 - 2;
-/*
+
 					object.rotation.x = Math.random() * 2 * Math.PI;
 					object.rotation.y = Math.random() * 2 * Math.PI;
 					object.rotation.z = Math.random() * 2 * Math.PI;
@@ -185,7 +106,7 @@
 					object.userData.velocity.x = Math.random() * 0.01 - 0.005;
 					object.userData.velocity.y = Math.random() * 0.01 - 0.005;
 					object.userData.velocity.z = Math.random() * 0.01 - 0.005;
-*/
+
 					room.add( object );
 
 				}
@@ -197,7 +118,6 @@
 				//
 
 				renderer = new THREE.WebGLRenderer( { antialias: true } );
-
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				container.appendChild( renderer.domElement );
@@ -210,6 +130,24 @@
 
 					renderer.vr.setDevice( device );
 					document.body.appendChild( WEBVR.getButton( device, renderer.domElement ) );
+
+				} );
+
+				//
+
+				gamepad = new THREE.DaydreamController();
+				gamepad.position.set( 0.25, - 0.5, 0 );
+				scene.add( gamepad );
+
+				//
+
+				var gamepadHelper = new THREE.Line( new THREE.BufferGeometry(), new THREE.LineBasicMaterial( { linewidth: 4 } ) );
+				gamepadHelper.geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( [ 0, 0, 0, 0, 0, - 10 ], 3 ) );
+				gamepad.add( gamepadHelper );
+
+				renderer.domElement.addEventListener( 'click', function ( event ) {
+
+					gamepadHelper.material.color.setHex( Math.random() * 0xffffff );
 
 				} );
 
@@ -237,8 +175,37 @@
 			}
 
 			function render() {
-/*
+
+				gamepad.update();
+
 				var delta = clock.getDelta() * 60;
+
+				// find intersections
+
+				raycaster.ray.origin.copy( gamepad.position );
+				raycaster.ray.direction.set( 0, 0, - 1 ).applyQuaternion( gamepad.quaternion );
+
+				var intersects = raycaster.intersectObjects( room.children );
+
+				if ( intersects.length > 0 ) {
+
+					if ( INTERSECTED != intersects[ 0 ].object ) {
+
+						if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+
+						INTERSECTED = intersects[ 0 ].object;
+						INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+						INTERSECTED.material.emissive.setHex( 0xff0000 );
+
+					}
+
+				} else {
+
+					if ( INTERSECTED ) INTERSECTED.material.emissive.setHex( INTERSECTED.currentHex );
+
+					INTERSECTED = undefined;
+
+				}
 
 				// keep cubes inside room
 
@@ -274,9 +241,7 @@
 					cube.rotation.z += cube.userData.velocity.z * 2 * delta;
 
 				}
-*/
 
-				// renderer.clear();
 				renderer.render( scene, camera );
 
 			}
