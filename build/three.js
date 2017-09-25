@@ -6098,7 +6098,7 @@
 
 	var premultiplied_alpha_fragment = "#ifdef PREMULTIPLIED_ALPHA\n\tgl_FragColor.rgb *= gl_FragColor.a;\n#endif\n";
 
-	var project_vertex = "\nmat4 viewMatrixEye = VIEW_ID == 0u ? leftViewMatrix : rightViewMatrix;\nmat4 projectionMatrixEye = VIEW_ID == 0u ? leftProjectionMatrix : rightProjectionMatrix;\nviewMatrixEye = rightViewMatrix;\nprojectionMatrixEye = rightProjectionMatrix;\nvec4 mvPosition = viewMatrixEye * modelMatrix * vec4( transformed, 1.0 );\ngl_Position = projectionMatrixEye * mvPosition;\n";
+	var project_vertex = "\nmat4 viewMatrixEye = VIEW_ID == 0u ? leftViewMatrix : rightViewMatrix;\nmat4 projectionMatrixEye = VIEW_ID == 0u ? leftProjectionMatrix : rightProjectionMatrix;\nvec4 mvPosition = viewMatrixEye * modelMatrix * vec4( transformed, 1.0 );\ngl_Position = projectionMatrixEye * mvPosition;\n";
 
 	var dithering_fragment = "#if defined( DITHERING )\n  gl_FragColor.rgb = dithering( gl_FragColor.rgb );\n#endif\n";
 

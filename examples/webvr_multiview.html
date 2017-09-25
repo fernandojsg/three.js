@@ -1,33 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>three.js webvr - roller coaster</title>
+		<title>three.js webvr - daydream</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 		<!-- Origin Trial Token, feature = WebVR (For Chrome M59+), origin = https://threejs.org, expires = 2017-10-09 -->
 		<meta http-equiv="origin-trial" data-feature="WebVR (For Chrome M59+)" data-expires="2017-10-09" content="AjrMPp+ZdEH97MOiKUzcpxLvh+B6I0CL55bPSbvQxL5ggVHl7X2dyEwTfXUgaMV7YLPOev4VZ4Uz+jMTsx3MPQEAAABNeyJvcmlnaW4iOiJodHRwczovL3RocmVlanMub3JnOjQ0MyIsImZlYXR1cmUiOiJXZWJWUjEuMSIsImV4cGlyeSI6MTUwNzU3MTAwOH0=">
 		<style>
 			body {
-				margin: 0px;
-				color: #fff;
 				font-family: Monospace;
-				background-color: #444;
+				background-color: #999;
+				color: #fff;
+				margin: 0px;
 				overflow: hidden;
 			}
 			a {
-				color: #00f;
+				color: #f00;
 			}
 		</style>
 	</head>
+
+
 	<body>
 
 		<script src="../build/three.js"></script>
 
-		<script src="js/RollerCoaster.js"></script>
-
+		<script src="js/vr/DaydreamController.js"></script>
 		<script src="js/vr/WebVR.js"></script>
+		<script src="webgl-debug.js"></script>
+
+		<script id="vertexShader" type="x-shader/x-vertex">
+			#extension GL_OVR_multiview2 : require
+			#define VIEW_ID gl_ViewID_OVR
+			layout(num_views=2) in;
+
+			uniform mat4 leftProjectionMatrix;
+	    uniform mat4 leftViewMatrix;
+	    uniform mat4 rightProjectionMatrix;
+	    uniform mat4 rightViewMatrix;
+			uniform mat4 modelMatrix;
+			uniform mat4 modelViewMatrix;
+
+			in vec3 position;
+
+			void main()	{
+
+				mat4 m = VIEW_ID == 0u ? (leftProjectionMatrix * leftViewMatrix) : (rightProjectionMatrix * rightViewMatrix);
+				m = modelViewMatrix * m;
+				gl_Position = m * vec4( position, 1.0 );
+
+			}
+
+		</script>
+	<!-- #version 300 es -->
+		<script id="fragmentShader" type="x-shader/x-fragment">
+			precision mediump float;
+			// out vec4 out_color;
+			uniform vec3 color;
+
+			void main()	{
+
+				gl_FragColor = vec4( color, 1.0 );
+
+			}
+
+		</script>
 
 		<script>
+
+			WEBVR.attributes = {
+				depth: true,
+				multiview: true
+			};
 
 			WEBVR.checkAvailability().catch( function( message ) {
 
@@ -37,175 +81,143 @@
 
 			//
 
-			var renderer = new THREE.WebGLRenderer( { antialias: true } );
-			renderer.setPixelRatio( window.devicePixelRatio );
-			renderer.setSize( window.innerWidth, window.innerHeight );
-			document.body.appendChild( renderer.domElement );
+			var clock = new THREE.Clock();
 
-			renderer.vr.enabled = true;
+			var container;
+			var camera, scene, ray, raycaster, renderer;
+			var gamepad;
 
-			var scene = new THREE.Scene();
-			scene.background = new THREE.Color( 0xf0f0ff );
+			var room;
 
-			var light = new THREE.HemisphereLight( 0xfff0f0, 0x606066 );
-			light.position.set( 1, 1, 1 );
-			scene.add( light );
+			init();
+			animate();
 
-			var train = new THREE.Object3D();
-			scene.add( train );
+			function init() {
 
-			var camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 0.1, 500 );
-			train.add( camera );
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
 
-			// environment
+				var info = document.createElement( 'div' );
+				info.style.position = 'absolute';
+				info.style.top = '10px';
+				info.style.width = '100%';
+				info.style.textAlign = 'center';
+				info.innerHTML = '<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> webvr - daydream';
+				container.appendChild( info );
+/*
+				var background = new THREE.CubeTextureLoader()
+					.setPath( 'textures/cube/MilkyWay/' )
+					.load( [ 'dark-s_px.jpg', 'dark-s_nx.jpg', 'dark-s_py.jpg', 'dark-s_ny.jpg', 'dark-s_pz.jpg', 'dark-s_nz.jpg' ] );
+				background.format = THREE.RGBFormat;
+*/
+				scene = new THREE.Scene();
+	//			scene.background = background;
 
-			var geometry = new THREE.PlaneBufferGeometry( 500, 500, 15, 15 );
-			geometry.applyMatrix( new THREE.Matrix4().makeRotationX( - Math.PI / 2 ) );
+				camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 0.1, 10 );
+/*
+				var material = new THREE.RawShaderMaterial( {
 
-			var positions = geometry.attributes.position.array;
-			var vertex = new THREE.Vector3();
+					uniforms: {
+						time: { value: 1.0 }
+					},
+					vertexShader: document.getElementById( 'vertexShader' ).textContent,
+					fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
+					side: THREE.DoubleSide,
+					transparent: true
 
-			for ( var i = 0; i < positions.length; i += 3 ) {
+				} );
 
-				vertex.fromArray( positions, i );
+				room = new THREE.Mesh(
+					new THREE.BoxGeometry( 6, 6, 6, 8, 8, 8 ),
+					material
+				);
+				scene.add( room );
+*/
 
-				vertex.x += Math.random() * 10 - 5;
-				vertex.z += Math.random() * 10 - 5;
+				room = new THREE.Group();
+				scene.add( room );
 
-				var distance = ( vertex.distanceTo( scene.position ) / 5 ) - 25;
-				vertex.y = Math.random() * Math.max( 0, distance );
+				scene.add( new THREE.HemisphereLight( 0x606060, 0x404040 ) );
 
-				vertex.toArray( positions, i );
+				var light = new THREE.DirectionalLight( 0xffffff );
+				light.position.set( 1, 1, 1 ).normalize();
+				scene.add( light );
+
+				var geometry = new THREE.BoxGeometry( 0.15, 0.15, 0.15 );
+				var geometry = new THREE.SphereGeometry( 0.2, 32, 32 );
+
+				for ( var i = 0; i < 200; i ++ ) {
+
+					var material = new THREE.RawShaderMaterial( {
+						uniforms: {
+							leftProjectionMatrix: { value: new THREE.Matrix4() },
+					    leftViewMatrix: { value: new THREE.Matrix4() },
+					    rightProjectionMatrix: { value: new THREE.Matrix4() },
+					    rightViewMatrix: { value: new THREE.Matrix4() },
+							modelMatrix: { value: new THREE.Matrix4() },
+							modelViewMatrix: { value: new THREE.Matrix4() },
+							color: { value: new THREE.Color( Math.random() * 0xffffff ) }
+						},
+						vertexShader: document.getElementById( 'vertexShader' ).textContent,
+						fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+
+					} );
+					//var material = new THREE.MeshBasicMaterial( { color: Math.random() * 0xffffff } );
+					var material = new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } );
+					//var material = new THREE.MeshStandardMaterial( { color: Math.random() * 0xffffff, roughness: Math.random(), metalness: Math.random() } );
+
+
+					var object = new THREE.Mesh( geometry, material );
+
+					object.position.x = Math.random() * 4 - 2;
+					object.position.y = Math.random() * 4 - 2;
+					object.position.z = Math.random() * 4 - 2;
+/*
+					object.rotation.x = Math.random() * 2 * Math.PI;
+					object.rotation.y = Math.random() * 2 * Math.PI;
+					object.rotation.z = Math.random() * 2 * Math.PI;
+
+					object.scale.x = Math.random() + 0.5;
+					object.scale.y = Math.random() + 0.5;
+					object.scale.z = Math.random() + 0.5;
+
+					object.userData.velocity = new THREE.Vector3();
+					object.userData.velocity.x = Math.random() * 0.01 - 0.005;
+					object.userData.velocity.y = Math.random() * 0.01 - 0.005;
+					object.userData.velocity.z = Math.random() * 0.01 - 0.005;
+*/
+					room.add( object );
+
+				}
+
+				//
+
+				raycaster = new THREE.Raycaster();
+
+				//
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+				renderer.vr.enabled = true;
+
+				//
+
+				WEBVR.getVRDisplay( function ( device ) {
+
+					renderer.vr.setDevice( device );
+					document.body.appendChild( WEBVR.getButton( device, renderer.domElement ) );
+
+				} );
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
 
 			}
-
-			geometry.computeVertexNormals();
-
-			var material = new THREE.MeshLambertMaterial( {
-				color: 0x407000
-			} );
-
-			var mesh = new THREE.Mesh( geometry, material );
-			scene.add( mesh );
-
-			var geometry = new TreesGeometry( mesh );
-			var material = new THREE.MeshBasicMaterial( {
-				side: THREE.DoubleSide, vertexColors: THREE.VertexColors
-			} );
-			var mesh = new THREE.Mesh( geometry, material );
-			scene.add( mesh );
-
-			var geometry = new SkyGeometry();
-			var material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
-			var mesh = new THREE.Mesh( geometry, material );
-			scene.add( mesh );
-
-			//
-
-			var PI2 = Math.PI * 2;
-
-			var curve = ( function () {
-
-				var vector = new THREE.Vector3();
-				var vector2 = new THREE.Vector3();
-
-				return {
-
-					getPointAt: function ( t ) {
-
-						t = t * PI2;
-
-						var x = Math.sin( t * 3 ) * Math.cos( t * 4 ) * 50;
-						var y = Math.sin( t * 10 ) * 2 + Math.cos( t * 17 ) * 2 + 5;
-						var z = Math.sin( t ) * Math.sin( t * 4 ) * 50;
-
-						return vector.set( x, y, z ).multiplyScalar( 2 );
-
-					},
-
-					getTangentAt: function ( t ) {
-
-						var delta = 0.0001;
-						var t1 = Math.max( 0, t - delta );
-						var t2 = Math.min( 1, t + delta );
-
-						return vector2.copy( this.getPointAt ( t2 ) )
-							.sub( this.getPointAt( t1 ) ).normalize();
-
-					}
-
-				};
-
-			} )();
-
-			var geometry = new RollerCoasterGeometry( curve, 1500 );
-			var material = new THREE.MeshPhongMaterial( {
-				vertexColors: THREE.VertexColors
-			} );
-			var mesh = new THREE.Mesh( geometry, material );
-			scene.add( mesh );
-
-			var geometry = new RollerCoasterLiftersGeometry( curve, 100 );
-			var material = new THREE.MeshPhongMaterial();
-			var mesh = new THREE.Mesh( geometry, material );
-			mesh.position.y = 0.1;
-			scene.add( mesh );
-
-			var geometry = new RollerCoasterShadowGeometry( curve, 500 );
-			var material = new THREE.MeshBasicMaterial( {
-				color: 0x305000, depthWrite: false, transparent: true
-			} );
-			var mesh = new THREE.Mesh( geometry, material );
-			mesh.position.y = 0.1;
-			scene.add( mesh );
-
-			var funfairs = [];
-
-			//
-
-			var geometry = new THREE.CylinderBufferGeometry( 10, 10, 5, 15 );
-			var material = new THREE.MeshLambertMaterial( {
-				color: 0xff8080,
-				//flatShading: true // Lambert does not support flat shading
-			} );
-			var mesh = new THREE.Mesh( geometry, material );
-			mesh.position.set( - 80, 10, - 70 );
-			mesh.rotation.x = Math.PI / 2;
-			scene.add( mesh );
-
-			funfairs.push( mesh );
-
-			var geometry = new THREE.CylinderBufferGeometry( 5, 6, 4, 10 );
-			var material = new THREE.MeshLambertMaterial( {
-				color: 0x8080ff,
-				//flatShading: true // Lambert does not support flat shading
-			} );
-			var mesh = new THREE.Mesh( geometry, material );
-			mesh.position.set( 50, 2, 30 );
-			scene.add( mesh );
-
-			funfairs.push( mesh );
-
-			//
-
-			WEBVR.attributes = {
-				depth: true,
-				multiview: true
-			};
-
-			console.log(WEBVR.attributes, WEBVR);
-
-			WEBVR.getVRDisplay( function ( display ) {
-
-				renderer.vr.setDevice( display );
-
-				document.body.appendChild( WEBVR.getButton( display, renderer.domElement ) );
-
-			} );
-
-			//
-
-			window.addEventListener( 'resize', onWindowResize, false );
 
 			function onWindowResize() {
 
@@ -218,55 +230,57 @@
 
 			//
 
-			var position = new THREE.Vector3();
-			var tangent = new THREE.Vector3();
+			function animate() {
 
-			var lookAt = new THREE.Vector3();
-
-			var velocity = 0;
-			var progress = 0;
-
-			var prevTime = performance.now();
-
-			function render() {
-
-				var time = performance.now();
-				var delta = time - prevTime;
-
-				for ( var i = 0; i < funfairs.length; i ++ ) {
-
-					funfairs[ i ].rotation.y = time * 0.0004;
-
-				}
-
-				//
-
-				progress += velocity;
-				progress = progress % 1;
-
-				position.copy( curve.getPointAt( progress ) );
-				position.y += 0.3;
-
-				train.position.copy( position );
-
-				tangent.copy( curve.getTangentAt( progress ) );
-
-				velocity -= tangent.y * 0.0000001 * delta;
-				velocity = Math.max( 0.00004, Math.min( 0.0002, velocity ) );
-
-				train.lookAt( lookAt.copy( position ).sub( tangent ) );
-
-				//
-
-				renderer.render( scene, camera );
-
-				prevTime = time;
+				renderer.animate( render );
 
 			}
 
-			renderer.animate( render );
+			function render() {
+/*
+				var delta = clock.getDelta() * 60;
+
+				// keep cubes inside room
+
+				for ( var i = 0; i < room.children.length; i ++ ) {
+
+					var cube = room.children[ i ];
+
+					cube.position.add( cube.userData.velocity );
+
+					if ( cube.position.x < - 3 || cube.position.x > 3 ) {
+
+						cube.position.x = THREE.Math.clamp( cube.position.x, - 3, 3 );
+						cube.userData.velocity.x = - cube.userData.velocity.x;
+
+					}
+
+					if ( cube.position.y < - 3 || cube.position.y > 3 ) {
+
+						cube.position.y = THREE.Math.clamp( cube.position.y, - 3, 3 );
+						cube.userData.velocity.y = - cube.userData.velocity.y;
+
+					}
+
+					if ( cube.position.z < - 3 || cube.position.z > 3 ) {
+
+						cube.position.z = THREE.Math.clamp( cube.position.z, - 3, 3 );
+						cube.userData.velocity.z = - cube.userData.velocity.z;
+
+					}
+
+					cube.rotation.x += cube.userData.velocity.x * 2 * delta;
+					cube.rotation.y += cube.userData.velocity.y * 2 * delta;
+					cube.rotation.z += cube.userData.velocity.z * 2 * delta;
+
+				}
+*/
+
+				// renderer.clear();
+				renderer.render( scene, camera );
+
+			}
 
 		</script>
-
 	</body>
 </html>

@@ -8,8 +8,8 @@ mat4 projectionMatrixEye = VIEW_ID == 0u ? leftProjectionMatrix : rightProjectio
 //viewMatrixEye = leftViewMatrix;
 //projectionMatrixEye = leftProjectionMatrix;
 
-viewMatrixEye = rightViewMatrix;
-projectionMatrixEye = rightProjectionMatrix;
+// viewMatrixEye = rightViewMatrix;
+// projectionMatrixEye = rightProjectionMatrix;
 
 vec4 mvPosition = viewMatrixEye * modelMatrix * vec4( transformed, 1.0 );
 
