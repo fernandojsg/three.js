@@ -37,6 +37,8 @@ setViewPortAndScissors(view)
 for obj in renderlist:
   render (obj, [framedata.leftMatrix, framedata.rightMatrix], view.fbo)
  */
+
+
 import { REVISION, RGBAFormat, HalfFloatType, FloatType, ByteType, UnsignedByteType, FrontFaceDirectionCW, TriangleFanDrawMode, TriangleStripDrawMode, TrianglesDrawMode, NoColors, LinearToneMapping } from '../constants.js';
 import { _Math } from '../math/Math.js';
 import { Matrix4 } from '../math/Matrix4.js';
@@ -244,6 +246,7 @@ function WebGLRenderer( parameters ) {
 			preserveDrawingBuffer: _preserveDrawingBuffer
 		};
 
+		console.log(contextAttributes);
 		_gl = _context || _canvas.getContext( 'webgl', contextAttributes ) || _canvas.getContext( 'experimental-webgl', contextAttributes );
 
 		if ( _gl === null ) {
@@ -1218,12 +1221,11 @@ function WebGLRenderer( parameters ) {
 				}
 
 				renderTarget = renderTargetMultiview;
-				this.setRenderTarget( renderTarget );
 
 			}
 		}
 
-		this.setRenderTarget( renderTargetMultiview );
+		this.setRenderTarget( renderTarget );
 
 		//
 
@@ -1272,6 +1274,8 @@ function WebGLRenderer( parameters ) {
 		state.buffers.color.setMask( true );
 
 		state.setPolygonOffset( false );
+
+		state.setScissorTest( false );
 
 		if ( vr.enabled ) {
 
@@ -1387,7 +1391,8 @@ function WebGLRenderer( parameters ) {
 
 				}
 
-				if ( ! object.frustumCulled || _frustum.intersectsObject( object ) ) {
+				if ( ! object.frustumCulled || _frustum.intersectsObject( object ) )
+				{
 
 					if ( sortObjects ) {
 
@@ -1441,11 +1446,11 @@ function WebGLRenderer( parameters ) {
 	function renderNonVRObjects( renderList, scene, camera, overrideMaterial ) {
 
 		if ( camera.isArrayCamera ) {
-			console.log('>>>>>>>>>>>>>>>>>> Array Camera');
+			// console.log('>>>>>>>>>>>>>>>>>> Array Camera');
 			renderObjectsArrayCamera( renderList, scene, camera, overrideMaterial );
 
 		} else {
-			console.log('>>>>>>>>>>>>>>>>>> Non-array camera');
+			// console.log('>>>>>>>>>>>>>>>>>> Non-array camera');
 
 			for ( var i = 0, l = renderList.length; i < l; i ++ ) {
 
@@ -1474,18 +1479,18 @@ function WebGLRenderer( parameters ) {
 
 			// Has multiview support
 			if ( views[ 0 ].getAttributes().multiview ) {
-				console.log('>>>>>>>>>>>>>>>>>> Views & Multiview');
+				// console.log('>>>>>>>>>>>>>>>>>> Views & Multiview');
 
 				// Views & Multiview
 				renderObjectsMultiview( renderList, scene, camera, overrideMaterial );
 
 			} else {
 				// Views
-				console.log('>>>>>>>>>>>>>>>>>> Views & !Multiview');
+				// console.log('>>>>>>>>>>>>>>>>>> Views & !Multiview');
 
 			}
 		} else {
-			console.log('>>>>>>>>>>>>>>>>>> Array camera (no views)');
+			// console.log('>>>>>>>>>>>>>>>>>> Array camera (no views)');
 
 			renderObjectsArrayCamera( renderList, scene, camera, overrideMaterial );
 
@@ -1828,7 +1833,6 @@ function WebGLRenderer( parameters ) {
 		if ( refreshProgram || camera !== _currentCamera ) {
 
 			if (multiviewSupport) {
-
 				p_uniforms.setValue( _gl, 'leftProjectionMatrix', camera.cameras[ 0 ].projectionMatrix );
 				p_uniforms.setValue( _gl, 'rightProjectionMatrix', camera.cameras[ 1 ].projectionMatrix );
 				p_uniforms.setValue( _gl, 'projectionMatrix', camera.projectionMatrix );
@@ -1903,8 +1907,8 @@ function WebGLRenderer( parameters ) {
 			} else {
 
 				// For our rawshader material!
-				p_uniforms.setValue( _gl, 'leftViewMatrix', camera.cameras[0].matrixWorldInverse );
-				p_uniforms.setValue( _gl, 'rightViewMatrix', camera.cameras[1].matrixWorldInverse );
+				p_uniforms.setValue( _gl, 'leftViewMatrix', camera.cameras[ 0 ].matrixWorldInverse );
+				p_uniforms.setValue( _gl, 'rightViewMatrix', camera.cameras[ 1 ].matrixWorldInverse );
 
 			}
 

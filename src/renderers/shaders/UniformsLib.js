@@ -11,9 +11,6 @@ import { DataTexture } from '../../textures/DataTexture.js';
 
 var UniformsLib = {
 
-	vr: {
-	},
-
 	common: {
 
 		diffuse: { value: new Color( 0xeeeeee ) },
