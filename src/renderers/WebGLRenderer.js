@@ -1634,10 +1634,8 @@ function WebGLRenderer( parameters ) {
 
 				var shader = ShaderLib[ parameters.shaderID ];
 
-				// @todo Check if VR to include UniformsLib.vr
 				materialProperties.shader = {
 					name: material.type,
-					//uniforms: UniformsUtils.clone( UniformsUtils.merge( [ UniformsLib.vr, shader.uniforms ] ) ),
 					uniforms: UniformsUtils.clone( shader.uniforms ),
 					vertexShader: shader.vertexShader,
 					fragmentShader: shader.fragmentShader
