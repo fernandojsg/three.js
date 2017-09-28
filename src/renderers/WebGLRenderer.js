@@ -1905,8 +1905,8 @@ function WebGLRenderer( parameters ) {
 			} else {
 
 				// For our rawshader material!
-				p_uniforms.setValue( _gl, 'leftViewMatrix', camera.cameras[ 0 ].matrixWorldInverse );
-				p_uniforms.setValue( _gl, 'rightViewMatrix', camera.cameras[ 1 ].matrixWorldInverse );
+				// p_uniforms.setValue( _gl, 'leftViewMatrix', camera.cameras[ 0 ].matrixWorldInverse );
+				//p_uniforms.setValue( _gl, 'rightViewMatrix', camera.cameras[ 1 ].matrixWorldInverse );
 
 			}
 

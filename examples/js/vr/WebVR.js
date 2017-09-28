@@ -7,7 +7,10 @@
 
 var WEBVR = {
 
-	attributes: {},
+	attributes: {
+		depth: true,
+		multiview: true		
+	},
 
 	checkAvailability: function () {
 
@@ -93,10 +96,10 @@ var WEBVR = {
 		button.style.left = 'calc(50% - 50px)';
 		button.style.bottom = '20px';
 		button.style.width = '200px';
-		button.style.border = '0';
+		button.style.border = '1';
 		button.style.padding = '28px';
 		button.style.cursor = 'pointer';
-		button.style.backgroundColor = '#000';
+		button.style.backgroundColor = '#333';
 		button.style.color = '#fff';
 		button.style.fontFamily = 'sans-serif';
 		button.style.fontSize = '30px';
