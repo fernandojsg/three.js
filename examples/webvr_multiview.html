@@ -22,7 +22,34 @@
 
 
 	<body>
+<!--
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
+		<script>
+		function startLogger(server) {
 
+		  var socket = io.connect(server);
+		  socket.on('connect', function(data) {
+		  });
+
+		  function wrapConsoleInObserver () {
+		    for (var key in console) {
+		      if (typeof console[key] === 'function') {
+		        var fn = console[key].bind(console)
+		        console[key] = (...args) => {
+		          socket.emit('messages', key, args);
+		          return fn.apply(null, args)
+		        }
+		      }
+		    }
+		  }
+
+		  wrapConsoleInObserver();
+		  console.log('Logger started');
+		}
+
+	    startLogger('http://192.168.1.20:4200');
+	  </script>
+-->
 		<script src="../build/three.js"></script>
 
 		<script src="js/vr/DaydreamController.js"></script>
@@ -43,9 +70,10 @@
 			uniform mat4 modelViewMatrix;
 
 			in vec3 position;
+			flat out uint view_id;
 
 			void main()	{
-
+				view_id = VIEW_ID;
 				mat4 m = VIEW_ID == 0u ? (leftProjectionMatrix * leftViewMatrix) : (rightProjectionMatrix * rightViewMatrix);
 				m = m * modelMatrix;
 				gl_Position = m * vec4( position, 1.0 );
@@ -56,12 +84,12 @@
 	<!-- #version 300 es -->
 		<script id="fragmentShader" type="x-shader/x-fragment">
 			precision mediump float;
-			// out vec4 out_color;
-				uniform vec3 color;
+			uniform vec3 color;
+			flat in uint view_id;
 
 			void main()	{
 
-				gl_FragColor = vec4( color, 1.0 );
+				gl_FragColor = view_id == 0u ? vec4(1.0, 1.0, 0.0, 1.0) : vec4(1.0, 0.0, 0.0, 1.0); // vec4( color, 1.0 );
 
 			}
 
@@ -105,28 +133,11 @@
 				info.style.textAlign = 'center';
 				info.innerHTML = '<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> webvr - daydream';
 				container.appendChild( info );
-/*
-				var background = new THREE.CubeTextureLoader()
-					.setPath( 'textures/cube/MilkyWay/' )
-					.load( [ 'dark-s_px.jpg', 'dark-s_nx.jpg', 'dark-s_py.jpg', 'dark-s_ny.jpg', 'dark-s_pz.jpg', 'dark-s_nz.jpg' ] );
-				background.format = THREE.RGBFormat;
-*/
+
 				scene = new THREE.Scene();
-	//			scene.background = background;
 
 				camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 0.1, 10 );
-/*
-				var material = new THREE.RawShaderMaterial( {
-					uniforms: {
-						color: { value: new THREE.Vector3() }
-					},
-					vertexShader: document.getElementById( 'vertexShader' ).textContent,
-					fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
-					side: THREE.DoubleSide,
-					transparent: true
 
-				} );
-*/
 				room = new THREE.Mesh(
 					new THREE.BoxGeometry( 6, 6, 6, 8, 8, 8 ),
 					material
@@ -162,11 +173,9 @@
 
 					} );
 
-
 					// var material = new THREE.MeshBasicMaterial( { color: Math.random() * 0xffffff } );
-					//var material = new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } );
-					//var material = new THREE.MeshStandardMaterial( { color: Math.random() * 0xffffff, roughness: Math.random(), metalness: Math.random() } );
-
+					// var material = new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } );
+					var material = new THREE.MeshStandardMaterial( { color: Math.random() * 0xffffff, roughness: Math.random(), metalness: Math.random() } );
 
 					var object = new THREE.Mesh( geometry, material );
 
@@ -252,11 +261,14 @@
 						var camera2 = renderer.vr.getCamera( camera );
 
 						if (camera2.isArrayCamera) {
-							cube.material.uniforms.leftProjectionMatrix.value = camera2.cameras[ 0 ].projectionMatrix;
-							cube.material.uniforms.rightProjectionMatrix.value = camera2.cameras[ 1 ].projectionMatrix;
-							cube.material.uniforms.leftViewMatrix.value = camera2.cameras[ 0 ].matrixWorldInverse;
-							cube.material.uniforms.rightViewMatrix.value = camera2.cameras[ 1 ].matrixWorldInverse;
-							cube.material.uniforms.modelMatrix.value = cube.matrixWorld;
+							if ( cube.material.uniforms ) {
+								cube.material.uniforms.leftProjectionMatrix.value = camera2.cameras[ 0 ].projectionMatrix;
+								cube.material.uniforms.rightProjectionMatrix.value = camera2.cameras[ 1 ].projectionMatrix;
+								cube.material.uniforms.leftViewMatrix.value = camera2.cameras[ 0 ].matrixWorldInverse;
+								cube.material.uniforms.rightViewMatrix.value = camera2.cameras[ 1 ].matrixWorldInverse;
+								cube.material.uniforms.modelMatrix.value = cube.matrixWorld;
+							}
+
 						}
 					}
 
