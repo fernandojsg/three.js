@@ -24,7 +24,7 @@
 		</style>
 	</head>
 	<body>
-
+		<script src="webgl-debug.js"></script>
 		<script src="../build/three.js"></script>
 		<script src="js/vr/WebVR.js"></script>
 
@@ -94,8 +94,11 @@
 				}
 
 				//
+				var canvas = document.createElement( 'canvas' );
+				var context = canvas.getContext( 'webgl2', { antialias: false } );
 
-				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer = new THREE.WebGLRenderer( { canvas: canvas, context: context } );
+				//renderer = new THREE.WebGLRenderer( { antialias: true } );
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				renderer.vr.enabled = true;
@@ -177,7 +180,7 @@
 			//
 
 			function animate() {
-
+				
 				renderer.setAnimationLoop( render );
 
 			}

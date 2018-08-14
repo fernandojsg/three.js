@@ -209,6 +209,12 @@ function WebVRManager( renderer ) {
 
 	};
 
+	this.hasMultiviewSupport = function () {
+		
+		return renderer.context.getExtension('WEBGL_multiview');
+
+	};
+
 	this.getCamera = function ( camera ) {
 
 		if ( device === null ) {

@@ -93,6 +93,10 @@ function WebXRManager( renderer ) {
 		animation.stop();
 
 	}
+	
+	this.getSession = function () {
+		return session;
+	}
 
 	this.setSession = function ( value, options ) {
 
@@ -105,7 +109,7 @@ function WebXRManager( renderer ) {
 			session.addEventListener( 'selectend', onSessionEvent );
 			session.addEventListener( 'end', onSessionEnd );
 
-			session.baseLayer = new XRWebGLLayer( session, gl );
+			session.baseLayer = new XRWebGLLayer( session, gl, {antialias: false} );
 			session.requestFrameOfReference( options.frameOfReferenceType ).then( function ( value ) {
 
 				frameOfRef = value;
@@ -147,6 +151,12 @@ function WebXRManager( renderer ) {
 		camera.matrixWorldInverse.getInverse( camera.matrixWorld );
 
 	}
+
+	this.hasMultiviewSupport = function () {
+
+		return renderer.context.getExtension('WEBGL_multiview');
+
+	};
 
 	this.getCamera = function ( camera ) {
 

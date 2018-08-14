@@ -202,6 +202,12 @@ function WebGLRenderer( parameters ) {
 
 		_gl = _context || _canvas.getContext( 'webgl', contextAttributes ) || _canvas.getContext( 'experimental-webgl', contextAttributes );
 
+		function logGLCall(functionName, args) {
+			console.log("gl." + functionName + "(" +
+			   WebGLDebugUtils.glFunctionArgsToString(functionName, args) + ")");
+		}
+		// _gl = WebGLDebugUtils.makeDebugContext(_gl, undefined, logGLCall);
+
 		if ( _gl === null ) {
 
 			if ( _canvas.getContext( 'webgl' ) !== null ) {
@@ -300,8 +306,9 @@ function WebGLRenderer( parameters ) {
 
 	// vr
 
-	var vr = ( 'xr' in navigator ) ? new WebXRManager( _this ) : new WebVRManager( _this );
-
+	//var vr = ( 'xr' in navigator ) ? new WebXRManager( _this ) : new WebVRManager( _this );
+	var vr = new WebVRManager( _this );
+	
 	this.vr = vr;
 
 	// shadow map
@@ -364,6 +371,7 @@ function WebGLRenderer( parameters ) {
 	};
 
 	this.setSize = function ( width, height, updateStyle ) {
+		console.log(width, height);
 
 		if ( vr.isPresenting() ) {
 
@@ -1103,7 +1111,7 @@ function WebGLRenderer( parameters ) {
 			renderTarget = null;
 
 		}
-
+		
 		this.setRenderTarget( renderTarget );
 
 		//
@@ -1154,7 +1162,7 @@ function WebGLRenderer( parameters ) {
 
 		if ( vr.enabled ) {
 
-			vr.submitFrame();
+			// vr.submitFrame();
 
 		}
 
@@ -1325,8 +1333,220 @@ function WebGLRenderer( parameters ) {
 		}
 
 	}
+/*
+	function renderObjectsWithArrayCamera() {
+
+	}
+*/
+
+
+	function renderObjectsArrayCamera ( renderList, scene, camera, overrideMaterial ) {
+
+		for ( var i = 0, l = renderList.length; i < l; i ++ ) {
+
+			var renderItem = renderList[ i ];
+
+			var object = renderItem.object;
+			var geometry = renderItem.geometry;
+			var material = overrideMaterial === undefined ? renderItem.material : overrideMaterial;
+			var group = renderItem.group;
+
+			_currentArrayCamera = camera;
+
+			var cameras = camera.cameras;
+
+			for ( var j = 0, jl = cameras.length; j < jl; j ++ ) {
+
+				var camera2 = cameras[ j ];
+
+				if ( object.layers.test( camera2.layers ) ) {
+
+					if ( 'viewport' in camera2 ) { // XR
+
+						state.viewport( _currentViewport.copy( camera2.viewport ) );
+
+					} else {
+
+						var bounds = camera2.bounds;
+
+						var x = bounds.x * _width;
+						var y = bounds.y * _height;
+						var width = bounds.z * _width;
+						var height = bounds.w * _height;
+
+						state.viewport( _currentViewport.set( x, y, width, height ).multiplyScalar( _pixelRatio ) );
+
+					}
+
+					renderObject( object, scene, camera2, geometry, material, group );
+
+				}
+
+			}
+
+		}
+
+	}
+
+	var g_multiviewFb;        // multiview framebuffer.
+	var g_multiviewViewFb;    // single views inside the multiview framebuffer.
+	var g_multiviewTex;       // Color texture for multiview framebuffer.
+	var g_multiviewDepth;     // Depth texture for multiview framebuffer.
+	var g_multiviewFbWidth = 0;
+	var g_multiviewFbHeight = 0;
+	var multiview = extensions.get( 'WEBGL_multiview' );            // multiview extension.
+
+		function setupMultiviewFbIfNeeded() {
+			var width = _canvas.width;
+			var height = _canvas.height;
+			var gl = _gl;
+			
+			var halfWidth = Math.floor(width * 0.5);
+				if (!g_multiviewFb) {
+			  console.log('Setting up multiview FBO with dimensions: ', halfWidth, height);
+			  g_multiviewFb = gl.createFramebuffer();
+			  gl.bindFramebuffer(gl.FRAMEBUFFER, g_multiviewFb);
+		  
+			  g_multiviewTex = gl.createTexture();
+			  gl.bindTexture(gl.TEXTURE_2D_ARRAY, g_multiviewTex);
+			  gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+			  gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+			  gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.RGBA8, halfWidth, height, 2, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+			  multiview.framebufferTextureMultiviewWEBGL(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, g_multiviewTex, 0, 0, 2);
+		  
+			  g_multiviewDepth = gl.createTexture();
+			  gl.bindTexture(gl.TEXTURE_2D_ARRAY, g_multiviewDepth);
+			  gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+			  gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+			  gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.DEPTH24_STENCIL8, halfWidth, height, 2, 0, gl.DEPTH_STENCIL, gl.UNSIGNED_INT_24_8, null);
+			  multiview.framebufferTextureMultiviewWEBGL(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, g_multiviewDepth, 0, 0, 2);
+		  
+			  g_multiviewViewFb = [null, null];
+			  for (var viewIndex = 0; viewIndex < 2; ++viewIndex) {
+				g_multiviewViewFb[viewIndex] = gl.createFramebuffer();
+				gl.bindFramebuffer(gl.FRAMEBUFFER, g_multiviewViewFb[viewIndex]);
+				gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, g_multiviewTex, 0, viewIndex);
+			  }
+			  g_multiviewFbWidth = halfWidth;
+			  g_multiviewFbHeight = height;
+			}
+			if (g_multiviewFbWidth < halfWidth || g_multiviewFbHeight < height)
+			{
+			  console.log('Updating multiview FBO with dimensions: ', halfWidth, height);
+			  gl.bindTexture(gl.TEXTURE_2D_ARRAY, g_multiviewTex);
+			  gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.RGBA8, halfWidth, height, 2, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+			  gl.bindTexture(gl.TEXTURE_2D_ARRAY, g_multiviewDepth);
+			  gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.DEPTH24_STENCIL8, halfWidth, height, 2, 0, gl.DEPTH_STENCIL, gl.UNSIGNED_INT_24_8, null);
+			  g_multiviewFbWidth = halfWidth;
+			  g_multiviewFbHeight = height;
+			}
+			gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+		  }
+		  
+	function renderObjectsMultiview( renderList, scene, camera, overrideMaterial ) {
+
+		for ( var i = 0, l = renderList.length; i < l; i ++ ) {
+			var renderItem = renderList[ i ];
+
+			var object = renderItem.object;
+			var geometry = renderItem.geometry;
+			var material = overrideMaterial === undefined ? renderItem.material : overrideMaterial;
+			var group = renderItem.group;
+
+			renderObject( object, scene, camera, geometry, material, group );
+
+		}
+
+	}
+
+	function renderObjectsPresenting( renderList, scene, camera, overrideMaterial ) {
+		if ( isMultiviewEnabled() ) {
+			if ( vr instanceof WebXRManager ) {
+				// Check if .views are returning WebGL fbo and use them instead
+			}	
+
+			setupMultiviewFbIfNeeded();
+			
+			var width = _canvas.width;
+			var height = _canvas.height;
+
+			var halfWidth = Math.floor(width * 0.5);
+
+			var gl = _gl;
+			/*
+			gl.colorMask(true, true, true, true);
+			gl.clearColor(0,0.8,1,0);
+			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+		*/
+			_gl.bindFramebuffer(_gl.FRAMEBUFFER, g_multiviewFb);
+			_gl.disable(_gl.SCISSOR_TEST);
+
+			_gl.viewport(0, 0, halfWidth, height);
+			renderer.setViewport( 0, 0, halfWidth, height );
+
+			//gl.colorMask(true, true, true, true);
+			//gl.clearColor(0,0.8,1,0);
+			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+
+			
+			renderObjectsMultiview( renderList, scene, camera, overrideMaterial );
+
+			_gl.bindFramebuffer(_gl.DRAW_FRAMEBUFFER, null);
+			_gl.bindFramebuffer(_gl.READ_FRAMEBUFFER, g_multiviewViewFb[0]);
+			_gl.blitFramebuffer(0, 0, halfWidth, height, 0, 0, halfWidth, height, _gl.COLOR_BUFFER_BIT, _gl.NEAREST);
+			_gl.bindFramebuffer(_gl.READ_FRAMEBUFFER, g_multiviewViewFb[1]);
+			_gl.blitFramebuffer(0, 0, halfWidth, height, halfWidth, 0, width, height, _gl.COLOR_BUFFER_BIT, _gl.NEAREST);
+
+		} else {
+
+			renderObjectsArrayCamera( renderList, scene, camera, overrideMaterial );
+
+		}
+
+	}
+
+	function renderObjectsNonPresenting( renderList, scene, camera, overrideMaterial ) {
+
+		if ( camera.isArrayCamera ) {
+
+			renderObjectsArrayCamera( renderList, scene, camera, overrideMaterial );
+
+		} else {
+
+			for ( var i = 0, l = renderList.length; i < l; i ++ ) {
+
+				var renderItem = renderList[ i ];
+
+				var object = renderItem.object;
+				var geometry = renderItem.geometry;
+				var material = overrideMaterial === undefined ? renderItem.material : overrideMaterial;
+				var group = renderItem.group;
+
+				_currentArrayCamera = null;
+
+				renderObject( object, scene, camera, geometry, material, group );
+
+			}
+
+		}
+
+	}
 
 	function renderObjects( renderList, scene, camera, overrideMaterial ) {
+
+		if ( vr.isPresenting() ) {
+			
+			renderObjectsPresenting( renderList, scene, camera, overrideMaterial );
+
+		} else {
+
+			//renderObjectsNonPresenting( renderList, scene, camera, overrideMaterial );
+
+		}
+
+	}
+
+	function renderObjects__( renderList, scene, camera, overrideMaterial ) {
 
 		for ( var i = 0, l = renderList.length; i < l; i ++ ) {
 
@@ -1693,6 +1913,13 @@ function WebGLRenderer( parameters ) {
 
 		if ( refreshProgram || camera !== _currentCamera ) {
 
+			if ( isMultiviewEnabled() ) {
+				
+				p_uniforms.setValue( _gl, 'leftProjectionMatrix', camera.cameras[ 0 ].projectionMatrix );
+				p_uniforms.setValue( _gl, 'rightProjectionMatrix', camera.cameras[ 1 ].projectionMatrix );
+
+			}
+			
 			p_uniforms.setValue( _gl, 'projectionMatrix', camera.projectionMatrix );
 
 			if ( capabilities.logarithmicDepthBuffer ) {
@@ -1743,6 +1970,13 @@ function WebGLRenderer( parameters ) {
 				material.isShaderMaterial ||
 				material.skinning ) {
 
+				if ( isMultiviewEnabled() ) {
+					
+					p_uniforms.setValue( _gl, 'leftViewMatrix', camera.cameras[ 0 ].matrixWorldInverse );
+					p_uniforms.setValue( _gl, 'rightViewMatrix', camera.cameras[ 1 ].matrixWorldInverse );
+
+				}
+				
 				p_uniforms.setValue( _gl, 'viewMatrix', camera.matrixWorldInverse );
 
 			}
@@ -2460,7 +2694,7 @@ function WebGLRenderer( parameters ) {
 	}() );
 
 	//
-
+	
 	this.setFramebuffer = function ( value ) {
 
 		_framebuffer = value;
@@ -2474,7 +2708,7 @@ function WebGLRenderer( parameters ) {
 	};
 
 	this.setRenderTarget = function ( renderTarget ) {
-
+		
 		_currentRenderTarget = renderTarget;
 
 		if ( renderTarget && properties.get( renderTarget ).__webglFramebuffer === undefined ) {
@@ -2485,7 +2719,6 @@ function WebGLRenderer( parameters ) {
 
 		var framebuffer = _framebuffer;
 		var isCube = false;
-
 		if ( renderTarget ) {
 
 			var __webglFramebuffer = properties.get( renderTarget ).__webglFramebuffer;
@@ -2519,11 +2752,11 @@ function WebGLRenderer( parameters ) {
 			_currentFramebuffer = framebuffer;
 
 		}
-
+/*
 		state.viewport( _currentViewport );
 		state.scissor( _currentScissor );
 		state.setScissorTest( _currentScissorTest );
-
+*/
 		if ( isCube ) {
 
 			var textureProperties = properties.get( renderTarget.texture );
@@ -2607,6 +2840,14 @@ function WebGLRenderer( parameters ) {
 		}
 
 	};
+
+	function isMultiviewEnabled () {
+		
+		return vr.isPresenting() && vr.hasMultiviewSupport();
+
+	}
+
+	this.isMultiviewEnabled = isMultiviewEnabled;
 
 	this.copyFramebufferToTexture = function ( position, texture, level ) {
 

@@ -10,7 +10,7 @@ var WEBVR = {
 	createButton: function ( renderer, options ) {
 
 		function showEnterVR( device ) {
-
+console.log('vr');
 			button.style.display = '';
 
 			button.style.cursor = 'pointer';
@@ -33,6 +33,7 @@ var WEBVR = {
 		}
 
 		function showEnterXR( device ) {
+			console.log('xr');
 
 			var currentSession = null;
 
@@ -128,7 +129,7 @@ var WEBVR = {
 
 		}
 
-		if ( 'xr' in navigator ) {
+		if ( false && 'xr' in navigator ) {
 
 			var button = document.createElement( 'button' );
 			button.style.display = 'none';
@@ -180,7 +181,9 @@ var WEBVR = {
 				.then( function ( displays ) {
 
 					if ( displays.length > 0 ) {
-
+						displays[0].depthNear = 0.1;
+						displays[0].depthFar = 1024.0;
+			
 						showEnterVR( displays[ 0 ] );
 
 					} else {
