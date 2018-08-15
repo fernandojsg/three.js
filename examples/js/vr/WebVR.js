@@ -181,9 +181,6 @@ console.log('vr');
 				.then( function ( displays ) {
 
 					if ( displays.length > 0 ) {
-						displays[0].depthNear = 0.1;
-						displays[0].depthFar = 1024.0;
-			
 						showEnterVR( displays[ 0 ] );
 
 					} else {

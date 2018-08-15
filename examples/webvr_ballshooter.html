@@ -24,7 +24,7 @@
 		</style>
 	</head>
 	<body>
-		<script src="webgl-debug.js"></script>
+
 		<script src="../build/three.js"></script>
 		<script src="js/vr/WebVR.js"></script>
 
@@ -76,7 +76,7 @@
 
 				var geometry = new THREE.IcosahedronBufferGeometry( radius, 2 );
 
-				for ( var i = 0; i < 200; i ++ ) {
+				for ( var i = 0; i < 30000; i ++ ) {
 
 					var object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
 
@@ -94,11 +94,12 @@
 				}
 
 				//
+
 				var canvas = document.createElement( 'canvas' );
 				var context = canvas.getContext( 'webgl2', { antialias: false } );
 
 				renderer = new THREE.WebGLRenderer( { canvas: canvas, context: context } );
-				//renderer = new THREE.WebGLRenderer( { antialias: true } );
+				
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				renderer.vr.enabled = true;
@@ -180,7 +181,7 @@
 			//
 
 			function animate() {
-				
+
 				renderer.setAnimationLoop( render );
 
 			}
@@ -223,7 +224,7 @@
 						cube.userData.velocity.z = - cube.userData.velocity.z;
 
 					}
-
+/*
 					for ( var j = i + 1; j < room.children.length; j ++ ) {
 
 						var cube2 = room.children[ j ];
@@ -251,12 +252,14 @@
 						}
 
 					}
-
+*/
 					cube.userData.velocity.y -= 0.00098;
 
 				}
-
+				
+				console.time('renderer');
 				renderer.render( scene, camera );
+				console.timeEnd('renderer');
 
 			}
 
