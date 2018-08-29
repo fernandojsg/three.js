@@ -60,6 +60,8 @@ function WebGLRenderer( parameters ) {
 	var _canvas = parameters.canvas !== undefined ? parameters.canvas : document.createElementNS( 'http://www.w3.org/1999/xhtml', 'canvas' ),
 		_context = parameters.context !== undefined ? parameters.context : null,
 
+		_multiviewEnabled = parameters.multiview,
+
 		_alpha = parameters.alpha !== undefined ? parameters.alpha : false,
 		_depth = parameters.depth !== undefined ? parameters.depth : true,
 		_stencil = parameters.stencil !== undefined ? parameters.stencil : true,
@@ -67,6 +69,8 @@ function WebGLRenderer( parameters ) {
 		_premultipliedAlpha = parameters.premultipliedAlpha !== undefined ? parameters.premultipliedAlpha : true,
 		_preserveDrawingBuffer = parameters.preserveDrawingBuffer !== undefined ? parameters.preserveDrawingBuffer : false,
 		_powerPreference = parameters.powerPreference !== undefined ? parameters.powerPreference : 'default';
+
+	this._multiviewEnabled = _multiviewEnabled;
 
 	var currentRenderList = null;
 	var currentRenderState = null;
@@ -2843,7 +2847,7 @@ function WebGLRenderer( parameters ) {
 
 	function isMultiviewEnabled () {
 		
-		return vr.isPresenting() && vr.hasMultiviewSupport();
+		return _multiviewEnabled && vr.isPresenting() && vr.hasMultiviewSupport();
 
 	}
 

@@ -6109,7 +6109,7 @@ var packing = "vec3 packNormalToRGB( const in vec3 normal ) {\r\n\treturn normal
 
 var premultiplied_alpha_fragment = "#ifdef PREMULTIPLIED_ALPHA\r\n\r\n\t// Get get normal blending with premultipled, use with CustomBlending, OneFactor, OneMinusSrcAlphaFactor, AddEquation.\r\n\tgl_FragColor.rgb *= gl_FragColor.a;\r\n\r\n#endif\r\n";
 
-var project_vertex = "mat4 viewMatrixEye = gl_ViewID_OVR == 0u ? leftViewMatrix : rightViewMatrix;\r\nmat4 projectionMatrixEye = gl_ViewID_OVR == 0u ? leftProjectionMatrix : rightProjectionMatrix;\r\n\r\nvec4 mvPosition = viewMatrixEye * modelMatrix * vec4( transformed, 1.0 );\r\n\r\ngl_Position = projectionMatrixEye * mvPosition;";
+var project_vertex = "#ifdef MULTIVIEW\r\n    mat4 viewMatrixEye = gl_ViewID_OVR == 0u ? leftViewMatrix : rightViewMatrix;\r\n    mat4 projectionMatrixEye = gl_ViewID_OVR == 0u ? leftProjectionMatrix : rightProjectionMatrix;\r\n#endif\r\n\r\nvec4 mvPosition = viewMatrix * modelMatrix * vec4( transformed, 1.0 );\r\n\r\ngl_Position = projectionMatrix * mvPosition;";
 
 var dithering_fragment = "#if defined( DITHERING )\r\n\r\n  gl_FragColor.rgb = dithering( gl_FragColor.rgb );\r\n\r\n#endif\r\n";
 
@@ -16956,7 +16956,7 @@ function WebGLProgram( renderer, extensions, code, material, shader, parameters,
 	} else {
 
 		prefixVertex = [
-			renderer.vr.hasMultiviewSupport() ? '#extension GL_OVR_multiview : require\nlayout(num_views=2) in;' : '',
+			renderer._multiviewEnabled && renderer.vr.hasMultiviewSupport() ? '#define MULTIVIEW;\n#extension GL_OVR_multiview : require\nlayout(num_views=2) in;' : '',
 
 			'precision ' + parameters.precision + ' float;',
 			'precision ' + parameters.precision + ' int;',
@@ -17014,7 +17014,7 @@ function WebGLProgram( renderer, extensions, code, material, shader, parameters,
 			'uniform mat3 normalMatrix;',
 			'uniform vec3 cameraPosition;',
 
-			renderer.vr.hasMultiviewSupport() ? 'uniform mat4 leftViewMatrix;\nuniform mat4 rightViewMatrix;\nuniform mat4 leftProjectionMatrix;\nuniform mat4 rightProjectionMatrix;' : '',
+			renderer._multiviewEnabled && renderer.vr.hasMultiviewSupport() ? 'uniform mat4 leftViewMatrix;\nuniform mat4 rightViewMatrix;\nuniform mat4 leftProjectionMatrix;\nuniform mat4 rightProjectionMatrix;' : '',
 			
 			'attribute vec3 position;',
 			'attribute vec3 normal;',
@@ -17177,7 +17177,7 @@ function WebGLProgram( renderer, extensions, code, material, shader, parameters,
 
 		prefixFragment = [
 			'#version 300 es\n',
-			renderer.vr.hasMultiviewSupport() ? '#extension GL_OVR_multiview : require' : '',
+			renderer._multiviewEnabled && renderer.vr.hasMultiviewSupport() ? '#define MULTIVIEW;\n#extension GL_OVR_multiview : require' : '',
 			'#define varying in',
 			isGLSL3ShaderMaterial ? '' : 'out highp vec4 pc_fragColor;',
 			isGLSL3ShaderMaterial ? '' : '#define gl_FragColor pc_fragColor',
@@ -21577,6 +21577,8 @@ function WebGLRenderer( parameters ) {
 	var _canvas = parameters.canvas !== undefined ? parameters.canvas : document.createElementNS( 'http://www.w3.org/1999/xhtml', 'canvas' ),
 		_context = parameters.context !== undefined ? parameters.context : null,
 
+		_multiviewEnabled = parameters.multiview,
+
 		_alpha = parameters.alpha !== undefined ? parameters.alpha : false,
 		_depth = parameters.depth !== undefined ? parameters.depth : true,
 		_stencil = parameters.stencil !== undefined ? parameters.stencil : true,
@@ -21584,6 +21586,8 @@ function WebGLRenderer( parameters ) {
 		_premultipliedAlpha = parameters.premultipliedAlpha !== undefined ? parameters.premultipliedAlpha : true,
 		_preserveDrawingBuffer = parameters.preserveDrawingBuffer !== undefined ? parameters.preserveDrawingBuffer : false,
 		_powerPreference = parameters.powerPreference !== undefined ? parameters.powerPreference : 'default';
+
+	this._multiviewEnabled = _multiviewEnabled;
 
 	var currentRenderList = null;
 	var currentRenderState = null;
@@ -24257,7 +24261,7 @@ function WebGLRenderer( parameters ) {
 
 	function isMultiviewEnabled () {
 		
-		return vr.isPresenting() && vr.hasMultiviewSupport();
+		return _multiviewEnabled && vr.isPresenting() && vr.hasMultiviewSupport();
 
 	}
 

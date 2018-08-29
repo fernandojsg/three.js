@@ -325,7 +325,7 @@ function WebGLProgram( renderer, extensions, code, material, shader, parameters,
 	} else {
 
 		prefixVertex = [
-			renderer.vr.hasMultiviewSupport() ? '#extension GL_OVR_multiview : require\nlayout(num_views=2) in;' : '',
+			renderer._multiviewEnabled && renderer.vr.hasMultiviewSupport() ? '#define MULTIVIEW;\n#extension GL_OVR_multiview : require\nlayout(num_views=2) in;' : '',
 
 			'precision ' + parameters.precision + ' float;',
 			'precision ' + parameters.precision + ' int;',
@@ -383,7 +383,7 @@ function WebGLProgram( renderer, extensions, code, material, shader, parameters,
 			'uniform mat3 normalMatrix;',
 			'uniform vec3 cameraPosition;',
 
-			renderer.vr.hasMultiviewSupport() ? 'uniform mat4 leftViewMatrix;\nuniform mat4 rightViewMatrix;\nuniform mat4 leftProjectionMatrix;\nuniform mat4 rightProjectionMatrix;' : '',
+			renderer._multiviewEnabled && renderer.vr.hasMultiviewSupport() ? 'uniform mat4 leftViewMatrix;\nuniform mat4 rightViewMatrix;\nuniform mat4 leftProjectionMatrix;\nuniform mat4 rightProjectionMatrix;' : '',
 			
 			'attribute vec3 position;',
 			'attribute vec3 normal;',
@@ -546,7 +546,7 @@ function WebGLProgram( renderer, extensions, code, material, shader, parameters,
 
 		prefixFragment = [
 			'#version 300 es\n',
-			renderer.vr.hasMultiviewSupport() ? '#extension GL_OVR_multiview : require' : '',
+			renderer._multiviewEnabled && renderer.vr.hasMultiviewSupport() ? '#define MULTIVIEW;\n#extension GL_OVR_multiview : require' : '',
 			'#define varying in',
 			isGLSL3ShaderMaterial ? '' : 'out highp vec4 pc_fragColor;',
 			isGLSL3ShaderMaterial ? '' : '#define gl_FragColor pc_fragColor',

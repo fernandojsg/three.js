@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>three.js webvr - ball shooter</title>
+		<title>three.js webvr - multiview support</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 		<!-- Origin Trial Token, feature = WebVR (For Chrome M62+), origin = https://threejs.org, expires = 2018-08-30 -->
@@ -40,10 +40,22 @@
 			var normal = new THREE.Vector3();
 			var relativeVelocity = new THREE.Vector3();
 
+			function parseQueryString(s) {
+				const q = {};
+				(s.startsWith('?') ? s.substring(1) : s).split('&').forEach(pair => {
+					const parts = pair.split('=').map(decodeURIComponent);
+					q[parts[0]] = parts[1];
+				});
+				return q;
+			}
+
 			init();
 			animate();
-
+			
+			var ms;
 			function init() {
+				const g_query = parseQueryString(window.location.search);
+				var multiview = g_query.enableMultiview && g_query.enableMultiview === 'true';
 
 				container = document.createElement( 'div' );
 				document.body.appendChild( container );
@@ -53,7 +65,11 @@
 				info.style.top = '10px';
 				info.style.width = '100%';
 				info.style.textAlign = 'center';
-				info.innerHTML = '<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> webvr - ball shooter';
+
+				info.innerHTML = 'multiview demo - ' + (multiview ? '<b style="color:#3f3">multiview enabled</b>' : '<b style="color:#f33">multiview not enabled</b>') + ` <a href="?enableMultiview=${multiview ? 'false' : 'true '}">toggle</a>`;
+				ms = document.createElement('div');
+				ms.innerHTML = '';
+				info.appendChild(ms);
 				container.appendChild( info );
 
 				scene = new THREE.Scene();
@@ -98,7 +114,7 @@
 				var canvas = document.createElement( 'canvas' );
 				var context = canvas.getContext( 'webgl2', { antialias: false } );
 
-				renderer = new THREE.WebGLRenderer( { canvas: canvas, context: context } );
+				renderer = new THREE.WebGLRenderer( { canvas: canvas, context: context, multiview: multiview } );
 				
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
@@ -257,9 +273,11 @@
 
 				}
 				
-				console.time('renderer');
+				var ts = performance.now();
 				renderer.render( scene, camera );
-				console.timeEnd('renderer');
+				if (renderer.vr.isPresenting()) {
+					ms.innerHTML = 'renderer.render time: ' + (performance.now() - ts).toFixed(2) + 'ms';
+				}
 
 			}
 
