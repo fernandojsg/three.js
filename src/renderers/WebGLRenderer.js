@@ -1757,16 +1757,8 @@ function WebGLRenderer( parameters ) {
 
 			if ( material.supportsMultiview && multiview.isEnabled() ) {
 
-				if ( camera.isArrayCamera ) {
-
-					// @todo Obviously remove the map :)
-					p_uniforms.setValue( _gl, 'projectionMatrices', camera.cameras.map( c => c.projectionMatrix ) );
-
-				} else {
-
-					p_uniforms.setValue( _gl, 'projectionMatrices', [ camera.projectionMatrix, camera.projectionMatrix ] );
-
-				}
+				multiview.computeCameraMatrices( camera );
+				p_uniforms.setValue( _gl, 'projectionMatrices', camera.projectionMatrices );
 
 			} else {
 
@@ -1822,16 +1814,7 @@ function WebGLRenderer( parameters ) {
 
 				if ( material.supportsMultiview && multiview.isEnabled() ) {
 
-					if ( camera.isArrayCamera ) {
-
-						// @todo Obviously remove the map :)
-						p_uniforms.setValue( _gl, 'viewMatrix', camera.cameras.map( c => c.matrixWorldInverse ) );
-
-					} else {
-
-						p_uniforms.setValue( _gl, 'viewMatrices', [ camera.matrixWorldInverse, camera.matrixWorldInverse ] );
-
-					}
+					p_uniforms.setValue( _gl, 'viewMatrices', camera.viewMatrices );
 
 				} else {
 
