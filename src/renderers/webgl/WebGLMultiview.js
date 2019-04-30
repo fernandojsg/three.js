@@ -18,12 +18,36 @@ function WebGLMultiview( renderer, requested, options ) {
 	var properties = renderer.properties;
 
 	var renderTarget, currentRenderTarget;
+	var previousNumViews = 0;
 
-	this.getMaxViews = function () {
+	function setNumViews( numViews ) {
 
-		return capabilities.maxMultiviewViews;
+		renderTarget.setNumViews( numViews );
 
-	};
+		if ( previousNumViews !== numViews ) {
+
+			previousNumViews = numViews;
+			mat4Array = new Float32Array( numViews * 16 );
+			mat3Array = new Float32Array( numViews * 9 );
+
+		}
+
+	}
+
+	function getCamerasArray( camera ) {
+
+		if ( camera.isArrayCamera ) {
+
+			return camera.cameras;
+
+		} else {
+
+			cameras[ 0 ] = camera;
+			return cameras;
+
+		}
+
+	}
 
 	this.getNumViews = function () {
 
@@ -32,15 +56,11 @@ function WebGLMultiview( renderer, requested, options ) {
 	};
 
 	// Auxiliary matrices to be used when updating arrays of uniforms
-	var mat4 = [];
-	var mat3 = [];
-
-	for ( var i = 0; i < this.getMaxViews(); i ++ ) {
-
-		mat4[ i ] = new Matrix4();
-		mat3[ i ] = new Matrix3();
-
-	}
+	var mat4Array = null;
+	var mat3Array = null;
+	var mat3 = new Matrix3();
+	var mat4 = new Matrix4();
+	var cameras = [];
 
 	//
 
@@ -70,88 +90,79 @@ function WebGLMultiview( renderer, requested, options ) {
 
 	}
 
-	this.updateCameraProjectionMatrices = function ( camera, uniforms ) {
+	function setUniform4fv( uniforms, name ) {
 
-		var numViews = this.getNumViews();
+		if ( uniforms.map[ name ] ) {
 
-		if ( camera.isArrayCamera ) {
-
-			for ( var i = 0; i < numViews; i ++ ) {
-
-				mat4[ i ].copy( camera.cameras[ i ].projectionMatrix );
-
-			}
-
-		} else {
-
-			for ( var i = 0; i < numViews; i ++ ) {
-
-				mat4[ i ].copy( camera.projectionMatrix );
-
-			}
+			gl.uniformMatrix4fv( uniforms.map[ name ].addr, false, mat4Array );
 
 		}
 
-		uniforms.setValue( gl, 'projectionMatrices', mat4 );
+	}
+
+	function setUniform3fv( uniforms, name ) {
+
+		if ( uniforms.map[ name ] ) {
+
+			gl.uniformMatrix3fv( uniforms.map[ name ].addr, false, mat3Array );
+
+		}
+
+	}
+
+	this.updateCameraProjectionMatrices = function ( camera, uniforms ) {
+
+		var offset = 0;
+		var cameras = getCamerasArray( camera );
+
+		for ( var i = 0; i < cameras.length; i ++ ) {
+
+			cameras[ i ].projectionMatrix.toArray( mat4Array, offset );
+			offset += 16;
+
+		}
+
+		setUniform4fv( uniforms, 'projectionMatrices' );
 
 	};
 
 	this.updateCameraViewMatrices = function ( camera, uniforms ) {
 
-		var numViews = this.getNumViews();
+		var offset = 0;
+		var cameras = getCamerasArray( camera );
 
-		if ( camera.isArrayCamera ) {
+		for ( var i = 0; i < cameras.length; i ++ ) {
 
-			for ( var i = 0; i < numViews; i ++ ) {
-
-				mat4[ i ].copy( camera.cameras[ i ].matrixWorldInverse );
-
-			}
-
-		} else {
-
-			for ( var i = 0; i < numViews; i ++ ) {
-
-				mat4[ i ].copy( camera.matrixWorldInverse );
-
-			}
+			cameras[ i ].matrixWorldInverse.toArray( mat4Array, offset );
+			offset += 16;
 
 		}
 
-		uniforms.setValue( gl, 'viewMatrices', mat4 );
+		setUniform4fv( uniforms, 'viewMatrices' );
 
 	};
 
 	this.updateObjectMatrices = function ( object, camera, uniforms ) {
 
-		var numViews = this.getNumViews();
+		var offset3 = 0;
+		var offset4 = 0;
+		var cameras = getCamerasArray( camera );
 
-		if ( camera.isArrayCamera ) {
+		for ( var i = 0; i < cameras.length; i ++ ) {
 
-			for ( var i = 0; i < numViews; i ++ ) {
+			mat4.multiplyMatrices( camera.cameras[ i ].matrixWorldInverse, object.matrixWorld );
+			mat3.getNormalMatrix( mat4 );
 
-				mat4[ i ].multiplyMatrices( camera.cameras[ i ].matrixWorldInverse, object.matrixWorld );
-				mat3[ i ].getNormalMatrix( mat4[ i ] );
+			mat4.toArray( mat4Array, offset4 );
+			offset4 += 16;
 
-			}
-
-		} else {
-
-			// In this case we still need to provide an array of matrices but just the first one will be used
-			mat4[ 0 ].multiplyMatrices( camera.matrixWorldInverse, object.matrixWorld );
-			mat3[ 0 ].getNormalMatrix( mat4[ 0 ] );
-
-			for ( var i = 1; i < numViews; i ++ ) {
-
-				mat4[ i ].copy( mat4[ 0 ] );
-				mat3[ i ].copy( mat3[ 0 ] );
-
-			}
+			mat3.toArray( mat3Array, offset3 );
+			offset3 += 9;
 
 		}
 
-		uniforms.setValue( gl, 'modelViewMatrices', mat4 );
-		uniforms.setValue( gl, 'normalMatrices', mat3 );
+		setUniform4fv( uniforms, 'modelViewMatrices' );
+		setUniform3fv( uniforms, 'normalMatrices' );
 
 	};
 
@@ -171,11 +182,11 @@ function WebGLMultiview( renderer, requested, options ) {
 			width *= bounds.z;
 			height *= bounds.w;
 
-			renderTarget.setNumViews( camera.cameras.length );
+			setNumViews( camera.cameras.length );
 
 		} else {
 
-			renderTarget.setNumViews( DEFAULT_NUMVIEWS );
+			setNumViews( DEFAULT_NUMVIEWS );
 
 		}
 
