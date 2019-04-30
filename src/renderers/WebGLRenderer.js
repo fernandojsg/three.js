@@ -1377,61 +1377,63 @@ function WebGLRenderer( parameters ) {
 
 	function renderObjects( renderList, scene, camera, overrideMaterial ) {
 
-		if ( multiview.isEnabled() ) {
+		for ( var i = 0, l = renderList.length; i < l; i ++ ) {
 
-			for ( var i = 0, l = renderList.length; i < l; i ++ ) {
+			var renderItem = renderList[ i ];
 
-				var renderItem = renderList[ i ];
+			var object = renderItem.object;
+			var geometry = renderItem.geometry;
+			var material = overrideMaterial === undefined ? renderItem.material : overrideMaterial;
+			var group = renderItem.group;
 
-				var object = renderItem.object;
-				var geometry = renderItem.geometry;
-				var material = overrideMaterial === undefined ? renderItem.material : overrideMaterial;
-				var group = renderItem.group;
+			if ( multiview.isEnabled() ) {
+
+				_currentArrayCamera = camera;
 
 				renderObject(	object, scene, camera, geometry, material, group );
 
-			}
+			} else if ( camera.isArrayCamera ) {
 
-		} else {
+				_currentArrayCamera = camera;
 
-			for ( var i = 0, l = renderList.length; i < l; i ++ ) {
+				var cameras = camera.cameras;
 
-				var renderItem = renderList[ i ];
+				for ( var j = 0, jl = cameras.length; j < jl; j ++ ) {
 
-				var object = renderItem.object;
-				var geometry = renderItem.geometry;
-				var material = overrideMaterial === undefined ? renderItem.material : overrideMaterial;
-				var group = renderItem.group;
+					var camera2 = cameras[ j ];
 
-				if ( camera.isArrayCamera ) {
+					if ( object.layers.test( camera2.layers ) ) {
 
-					_currentArrayCamera = camera;
-
-					var cameras = camera.cameras;
-
-					for ( var j = 0, jl = cameras.length; j < jl; j ++ ) {
-
-						var camera2 = cameras[ j ];
-
-						if ( object.layers.test( camera2.layers ) ) {
+						if ( 'viewport' in camera2 ) { // XR
 
 							state.viewport( _currentViewport.copy( camera2.viewport ) );
 
-							currentRenderState.setupLights( camera2 );
+						} else {
 
-							renderObject( object, scene, camera2, geometry, material, group );
+							var bounds = camera2.bounds;
+
+							var x = bounds.x * _width;
+							var y = bounds.y * _height;
+							var width = bounds.z * _width;
+							var height = bounds.w * _height;
+
+							state.viewport( _currentViewport.set( x, y, width, height ).multiplyScalar( _pixelRatio ) );
 
 						}
 
+						currentRenderState.setupLights( camera2 );
+
+						renderObject( object, scene, camera2, geometry, material, group );
+
 					}
 
-				} else {
-
-					_currentArrayCamera = null;
-
-					renderObject( object, scene, camera, geometry, material, group );
-
 				}
+
+			} else {
+
+				_currentArrayCamera = null;
+
+				renderObject( object, scene, camera, geometry, material, group );
 
 			}
 
