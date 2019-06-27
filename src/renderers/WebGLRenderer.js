@@ -311,6 +311,17 @@ function WebGLRenderer( parameters ) {
 
 	initGLContext();
 
+	// end of frame configuration
+
+	const urlParams = new URLSearchParams(location.search);
+	this.useFinish = urlParams.has('finish');
+	this.useFlush = urlParams.has('flush');
+
+	this.presentExt = _gl.getExtension('WEBGL_explicit_present');
+	this.usePresent = urlParams.has('present') && !!this.presentExt;
+
+	console.log(`Rendering configuration:\n- finish: ${this.useFinish}\n- flush: ${this.useFlush}\n- present: ${this.usePresent}`);
+
 	// vr
 
 	var vr = ( typeof navigator !== 'undefined' && 'xr' in navigator && 'supportsSession' in navigator.xr ) ? new WebXRManager( _this ) : new WebVRManager( _this );
@@ -1240,7 +1251,23 @@ function WebGLRenderer( parameters ) {
 
 		}
 
-		// _gl.finish();
+		if (this.useFinish) {
+
+			_gl.finish();
+
+		}
+
+		if (this.useFlush) {
+
+			_gl.flush();
+
+		}
+
+		if (this.usePresent) {
+
+			this.presentExt.present();
+
+		}
 
 		currentRenderList = null;
 		currentRenderState = null;
