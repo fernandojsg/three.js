@@ -191,7 +191,7 @@ function WebGLRenderer( parameters ) {
 
 	// initialize
 
-	var _gl;
+	var _gl, _numFrames = 0, _totalTime = 0, _totalPreTime = 0;
 
 	try {
 
@@ -317,10 +317,10 @@ function WebGLRenderer( parameters ) {
 	this.useFinish = urlParams.has('finish');
 	this.useFlush = urlParams.has('flush');
 
-	this.presentExt = _gl.getExtension('WEBGL_explicit_present');
-	this.usePresent = urlParams.has('present') && !!this.presentExt;
+	var _presentExt = _gl.getExtension('WEBGL_explicit_present');
+	var _usePresent = urlParams.has('present') && !!_presentExt;
 
-	console.log(`Rendering configuration:\n- finish: ${this.useFinish}\n- flush: ${this.useFlush}\n- present: ${this.usePresent}`);
+	console.log(`Rendering configuration:\n- finish: ${this.useFinish}\n- flush: ${this.useFlush}\n- present: ${_usePresent}`);
 
 	// vr
 
@@ -1098,6 +1098,8 @@ function WebGLRenderer( parameters ) {
 
 	this.render = function ( scene, camera ) {
 
+		var startTime = performance.now();
+
 		var renderTarget, forceClear;
 
 		if ( arguments[ 2 ] !== undefined ) {
@@ -1251,6 +1253,9 @@ function WebGLRenderer( parameters ) {
 
 		}
 
+		var elapsedTime = performance.now() - startTime;
+		_totalPreTime += elapsedTime;
+
 		if (this.useFinish) {
 
 			_gl.finish();
@@ -1263,10 +1268,20 @@ function WebGLRenderer( parameters ) {
 
 		}
 
-		if (this.usePresent) {
+		if (_usePresent) {
 
-			this.presentExt.present();
+			_presentExt.present();
 
+		}
+
+		elapsedTime = performance.now() - startTime;
+		_totalTime += elapsedTime;
+		if (++_numFrames === 600) {
+			var url = window.location.pathname.substring(window.location.pathname.lastIndexOf('/')+1)
+			var testId =  url.substring(0, url.lastIndexOf('.html'));
+			var params = window.location.search.replace('?', '');
+
+			console.log(testId, params, 'average pre', _totalPreTime / _numFrames, 'average total', _totalTime / _numFrames);
 		}
 
 		currentRenderList = null;
