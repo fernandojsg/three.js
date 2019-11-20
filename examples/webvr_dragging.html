@@ -121,13 +121,13 @@
 				// controllers
 
 				controller1 = renderer.vr.getController( 0 );
-				controller1.addEventListener( 'selectstart', onSelectStart );
-				controller1.addEventListener( 'selectend', onSelectEnd );
+				controller1.addEventListener( 'squeezestart', onSelectStart );
+				controller1.addEventListener( 'squeezeend', onSelectEnd );
 				scene.add( controller1 );
 
 				controller2 = renderer.vr.getController( 1 );
-				controller2.addEventListener( 'selectstart', onSelectStart );
-				controller2.addEventListener( 'selectend', onSelectEnd );
+				controller2.addEventListener( 'squeezestart', onSelectStart );
+				controller2.addEventListener( 'squeezeend', onSelectEnd );
 				scene.add( controller2 );
 
 				//

@@ -23,6 +23,13 @@
 			<div>click and draw in the white box</div>
 		</div>
 		<canvas id="drawing-canvas" height="128" width="128"></canvas>
+		<!--<iframe style="z-index: 9999; position:absolute; left:0; top:0" id="pico8" src="http://localhost:8080/examples/flappy-bird/" width="600" height="600"></iframe>-->
+		<iframe
+			style="z-index: 9999; position:absolute; left:0; top:0"
+			id="pico8"
+			src="http://localhost:8080/examples/plat.html"
+			width="400" height="400">
+		</iframe>
 
 		<script type="module">
 
@@ -32,8 +39,12 @@
 			var drawStartPos = new THREE.Vector2();
 
 			init();
-			setupCanvasDrawing();
-			animate();
+			setTimeout(() => {
+				let canvas = document.getElementById('pico8').contentWindow.document.querySelector('canvas');
+				console.log('>>>>>>>', canvas);
+				setupCanvasDrawing();
+				animate();
+			}, 1000);
 
 			function init() {
 
@@ -61,8 +72,7 @@
 			function setupCanvasDrawing() {
 
 				// get canvas and context
-
-				var drawingCanvas = document.getElementById( 'drawing-canvas' );
+				var drawingCanvas = document.getElementById('pico8').contentWindow.document.querySelector('canvas'); //document.getElementById( 'drawing-canvas' );
 				var drawingContext = drawingCanvas.getContext( '2d' );
 
 				// draw white background
@@ -73,6 +83,9 @@
 				// set canvas as material.map (this could be done to any map, bump, displacement etc.)
 
 				material.map = new THREE.CanvasTexture( drawingCanvas );
+				material.map.minFilter = THREE.NearestFilter;
+				material.map.magFilter = THREE.NearestFilter;
+
 
 				// set the variable to keep track of when to draw
 
@@ -116,7 +129,6 @@
 				drawStartPos.set( x, y );
 				// need to flag the map as needing updating.
 				material.map.needsUpdate = true;
-
 			}
 
 			function onWindowResize() {
@@ -132,6 +144,7 @@
 
 				requestAnimationFrame( animate );
 
+				material.map.needsUpdate = true;
 				mesh.rotation.x += 0.01;
 				mesh.rotation.y += 0.01;
 
