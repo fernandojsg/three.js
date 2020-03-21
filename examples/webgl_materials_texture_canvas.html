@@ -27,7 +27,7 @@
 		<iframe
 			style="z-index: 9999; position:absolute; left:0; top:0"
 			id="pico8"
-			src="http://localhost:8080/examples/plat.html"
+			src="http://192.168.1.68:8080/examples/plat.html"
 			width="400" height="400">
 		</iframe>
 
@@ -39,12 +39,13 @@
 			var drawStartPos = new THREE.Vector2();
 
 			init();
-			setTimeout(() => {
-				let canvas = document.getElementById('pico8').contentWindow.document.querySelector('canvas');
-				console.log('>>>>>>>', canvas);
+			setTimeout( () => {
+
+				let canvas = document.getElementById( 'pico8' ).contentWindow.document.querySelector( 'canvas' );
+				console.log( '>>>>>>>', canvas );
 				setupCanvasDrawing();
 				animate();
-			}, 1000);
+			}, 1000 );
 
 			function init() {
 
@@ -72,7 +73,7 @@
 			function setupCanvasDrawing() {
 
 				// get canvas and context
-				var drawingCanvas = document.getElementById('pico8').contentWindow.document.querySelector('canvas'); //document.getElementById( 'drawing-canvas' );
+				var drawingCanvas = document.getElementById( 'pico8' ).contentWindow.document.querySelector( 'canvas' ); //document.getElementById( 'drawing-canvas' );
 				var drawingContext = drawingCanvas.getContext( '2d' );
 
 				// draw white background
