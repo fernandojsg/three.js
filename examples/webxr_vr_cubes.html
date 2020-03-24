@@ -13,6 +13,12 @@
 		</div>
 
 		<script src="js/vr/HelioWebXRPolyfill.js"></script>
+		<iframe
+			style="z-index: 9999; position:absolute; left:0; top:0"
+			id="pico8"
+			src="http://localhost:8080/examples/pico8/plat.html"
+			width="100" height="100">
+		</iframe>
 
 		<script type="module">
 
@@ -23,6 +29,7 @@
 			import { XRControllerModelFactory } from './jsm/webxr/XRControllerModelFactory.js';
 
 			var clock = new THREE.Clock();
+			var mesh, material;
 
 			var container;
 			var camera, scene, raycaster, renderer;
@@ -33,7 +40,27 @@
 			var INTERSECTED;
 
 			init();
+			setupCanvasDrawing();
 			animate();
+
+			function setupCanvasDrawing() {
+
+				// get canvas and context
+				var drawingCanvas = document.getElementById( 'pico8' ).contentWindow.document.querySelector( 'canvas' );
+				var drawingContext = drawingCanvas.getContext( '2d' );
+
+				// draw white background
+
+				drawingContext.fillStyle = '#FFFFFF';
+				drawingContext.fillRect( 0, 0, 128, 128 );
+
+				// set canvas as material.map (this could be done to any map, bump, displacement etc.)
+
+				material.map = new THREE.CanvasTexture( drawingCanvas );
+				material.map.minFilter = THREE.NearestFilter;
+				material.map.magFilter = THREE.NearestFilter;
+
+			}
 
 			function init() {
 
@@ -43,6 +70,13 @@
 				scene = new THREE.Scene();
 				scene.background = new THREE.Color( 0x505050 );
 
+
+				material = new THREE.MeshBasicMaterial();
+
+				mesh = new THREE.Mesh( new THREE.BoxBufferGeometry( 20, 20, 20 ), material );
+				mesh.position.z = - 50;
+				scene.add( mesh );
+
 				camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 10 );
 				camera.position.set( 0, 1.6, 3 );
 				scene.add( camera );
@@ -51,7 +85,7 @@
 					new BoxLineGeometry( 6, 6, 6, 10, 10, 10 ).translate( 0, 3, 0 ),
 					new THREE.LineBasicMaterial( { color: 0x808080 } )
 				);
-				scene.add( room );
+				//scene.add( room );
 
 				scene.add( new THREE.HemisphereLight( 0x606060, 0x404040 ) );
 
@@ -182,7 +216,7 @@
 			function render() {
 
 				var delta = clock.getDelta() * 60;
-
+/*
 				if ( controller.userData.isSelecting === true ) {
 
 					var cube = room.children[ 0 ];
@@ -262,6 +296,11 @@
 					cube.rotation.z += cube.userData.velocity.z * 2 * delta;
 
 				}
+				*/
+
+				material.map.needsUpdate = true;
+				mesh.rotation.x += 0.01;
+				mesh.rotation.y += 0.01;
 
 				renderer.render( scene, camera );
 

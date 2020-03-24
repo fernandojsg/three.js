@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - materials - canvas texture</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<link type="text/css" rel="stylesheet" href="main.css">
+	</head>
+	<body>
+
+		<div id="info">
+			<a href="http://threejs.org" target="_blank" rel="noopener">three.js</a> - webgl - canvas as a texture
+			<div>click and draw in the white box</div>
+		</div>
+		<script type="module">
+
+			import * as THREE from '../build/three.module.js';
+			import { VRButton } from './jsm/webxr/VRButton.js';
+			import { XRControllerModelFactory } from './jsm/webxr/XRControllerModelFactory.js';
+			import {
+				Constants as MotionControllerConstants
+			} from './jsm/libs/motion-controllers.module.js';
+
+			var camera, scene, renderer, mesh, material;
+			var drawStartPos = new THREE.Vector2();
+			var controller1, controller2;
+			var controllerGrip1, controllerGrip2;
+/*
+			var realRAF = window.requestAnimationFrame;
+			var i = 0;
+			var nextCallback = [];
+			window.requestAnimationFrame = function ( callback ) {
+
+				nextCallback.push(callback);
+				if ( renderer.xr.isPresenting ) {
+
+				} else {
+
+					realRAF( callback );
+
+				}
+
+			};
+*/
+			init();
+			setTimeout( () => {
+
+				let canvas = document.getElementById( 'pico8' ).contentWindow.document.querySelector( 'canvas' );
+				setupCanvasDrawing();
+				animate();
+			}, 1000 );
+
+			function init() {
+
+				camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 2000 );
+
+				scene = new THREE.Scene();
+
+				material = new THREE.MeshBasicMaterial();
+
+				mesh = new THREE.Mesh( new THREE.BoxBufferGeometry( 20, 20, 20 ), material );
+				mesh.position.z = - 50;
+				scene.add( mesh );
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				// renderer.outputEncoding = THREE.sRGBEncoding;
+				renderer.xr.enabled = true;
+				document.body.appendChild( renderer.domElement );
+
+				controller1 = renderer.xr.getController( 0 );
+				controller1.addEventListener( 'selectstart', onSelectStart );
+				controller1.addEventListener( 'selectend', onSelectEnd );
+				controller1.addEventListener( 'connected', function ( event ) {
+
+					//this.add( buildController( event.data ) );
+
+				} );
+				controller1.addEventListener( 'disconnected', function () {
+
+					this.remove( this.children[ 0 ] );
+
+				} );
+				scene.add( controller1 );
+
+				controller2 = renderer.xr.getController( 1 );
+				controller2.addEventListener( 'selectstart', onSelectStart );
+				controller2.addEventListener( 'selectend', onSelectEnd );
+				controller2.addEventListener( 'connected', function ( event ) {
+
+					//this.add( buildController( event.data ) );
+
+				} );
+				controller2.addEventListener( 'disconnected', function () {
+
+					this.remove( this.children[ 0 ] );
+
+				} );
+				scene.add( controller2 );
+
+				// The XRControllerModelFactory will automatically fetch controller models
+				// that match what the user is holding as closely as possible. The models
+				// should be attached to the object returned from getControllerGrip in
+				// order to match the orientation of the held device.
+
+				var controllerModelFactory = new XRControllerModelFactory();
+
+				controllerGrip1 = renderer.xr.getControllerGrip( 0 );
+				controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
+				scene.add( controllerGrip1 );
+
+				controllerGrip2 = renderer.xr.getControllerGrip( 1 );
+				controllerGrip2.add( controllerModelFactory.createControllerModel( controllerGrip2 ) );
+				scene.add( controllerGrip2 );
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+				document.body.appendChild( VRButton.createButton( renderer ) );
+
+				document.querySelector("Button").addEventListener("click", () => {
+					console.log('Entering!');
+					let picoWindow = document.getElementById( "pico8" ).contentWindow;
+//					picoWindow.requestAnimationFrame = renderer.animation.getContext().requestAnimationFrame;
+//					picoWindow.Browser.mainLoop.scheduler();
+				});
+			}
+
+			function onSelectStart() {
+
+				document.getElementById( "pico8" ).contentWindow.document.dispatchEvent( new KeyboardEvent( "keydown", { "keyCode": 88 } ) );
+
+			}
+
+			function onSelectEnd() {
+
+			}
+
+			// Sets up the drawing canvas and adds it as the material map
+
+			function setupCanvasDrawing() {
+
+				// get canvas and context
+				var drawingCanvas = document.getElementById( 'pico8' ).contentWindow.document.querySelector( 'canvas' ); //document.getElementById( 'drawing-canvas' );
+				var drawingContext = drawingCanvas.getContext( '2d' );
+
+				// draw white background
+
+				drawingContext.fillStyle = '#FFFFFF';
+				drawingContext.fillRect( 0, 0, 128, 128 );
+
+				// set canvas as material.map (this could be done to any map, bump, displacement etc.)
+
+				material.map = new THREE.CanvasTexture( drawingCanvas );
+				material.map.minFilter = THREE.NearestFilter;
+				material.map.magFilter = THREE.NearestFilter;
+
+
+				// set the variable to keep track of when to draw
+
+				var paint = false;
+
+				// add canvas event listeners
+				drawingCanvas.addEventListener( 'mousedown', function ( e ) {
+
+					paint = true;
+					drawStartPos.set( e.offsetX, e.offsetY );
+
+				} );
+
+				drawingCanvas.addEventListener( 'mousemove', function ( e ) {
+
+					if ( paint ) draw( drawingContext, e.offsetX, e.offsetY );
+
+				} );
+
+				drawingCanvas.addEventListener( 'mouseup', function () {
+
+					paint = false;
+
+				} );
+
+				drawingCanvas.addEventListener( 'mouseleave', function () {
+
+					paint = false;
+
+				} );
+
+			}
+
+			function draw( drawContext, x, y ) {
+
+				drawContext.moveTo( drawStartPos.x, drawStartPos.y );
+				drawContext.strokeStyle = '#000000';
+				drawContext.lineTo( x, y );
+				drawContext.stroke();
+				// reset drawing start position to current position.
+				drawStartPos.set( x, y );
+				// need to flag the map as needing updating.
+				material.map.needsUpdate = true;
+			}
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			function animate() {
+
+				renderer.setAnimationLoop( render );
+
+			}
+
+
+			var first = false;
+			function render() {
+
+				material.map.needsUpdate = true;
+				mesh.rotation.x += 0.01;
+				mesh.rotation.y += 0.01;
+
+				renderer.render( scene, camera );
+								
+				if (renderer.xr.isPresenting && !first) {
+					let picoWindow = document.getElementById( "pico8" ).contentWindow;
+					// picoWindow.requestAnimationFrame = renderer.animation.getContext().requestAnimationFrame;
+					picoWindow.Browser.mainLoop.runner();
+
+					// Browser.mainLoop.runner
+				}
+
+			}
+
+		</script>
+		<iframe
+		style="z-index: 9999; position:absolute; left:0; top:0"
+		id="pico8"
+		src="http://localhost:8080/examples/pico8/plat.html"
+		width="100" height="100">
+	</iframe>
+
+
+	</body>
+</html>
