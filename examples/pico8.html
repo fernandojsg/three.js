@@ -9,8 +9,7 @@
 	<body>
 
 		<div id="info">
-			<a href="http://threejs.org" target="_blank" rel="noopener">three.js</a> - webgl - canvas as a texture
-			<div>click and draw in the white box</div>
+			<a href="http://threejs.org" target="_blank" rel="noopener">three.js</a> - webgl - pico8
 		</div>
 		<script type="module">
 
@@ -55,6 +54,7 @@
 				camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 2000 );
 
 				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0x111111 );
 
 				material = new THREE.MeshBasicMaterial();
 
@@ -70,9 +70,6 @@
 				document.body.appendChild( renderer.domElement );
 
 				controller1 = renderer.xr.getController( 0 );
-				controller1.addEventListener( 'selectstart', onSelectStart );
-				controller1.addEventListener( 'squeezestart', onSqueezeStart );
-				controller1.addEventListener( 'selectend', onSelectEnd );
 				controller1.addEventListener( 'connected', function ( event ) {
 
 					//this.add( buildController( event.data ) );
@@ -86,9 +83,6 @@
 				scene.add( controller1 );
 
 				controller2 = renderer.xr.getController( 1 );
-				controller2.addEventListener( 'selectstart', onSelectStart );
-				controller2.addEventListener( 'squeezestart', onSqueezeStart );
-				controller2.addEventListener( 'selectend', onSelectEnd );
 				controller2.addEventListener( 'connected', function ( event ) {
 
 					//this.add( buildController( event.data ) );
@@ -120,34 +114,14 @@
 
 				document.body.appendChild( VRButton.createButton( renderer ) );
 
-				document.querySelector("Button").addEventListener("click", () => {
-					console.log('Entering!');
+				document.querySelector( "Button" ).addEventListener( "click", () => {
+
+					console.log( 'Entering!' );
 					let picoWindow = document.getElementById( "pico8" ).contentWindow;
-//					picoWindow.requestAnimationFrame = renderer.animation.getContext().requestAnimationFrame;
-//					picoWindow.Browser.mainLoop.scheduler();
-				});
-			}
-
-			// z: 90
-			// x: 88
-			// up: 38
-			// down: 40
-			// left: 37
-			// right: 39
-			function onSelectStart() {
-
-				document.getElementById( "pico8" ).contentWindow.document.dispatchEvent( new KeyboardEvent( "keydown", { "keyCode": 88 } ) );
-
-			}
-
-			function onSqueezeStart() {
-
-				document.getElementById( "pico8" ).contentWindow.document.dispatchEvent( new KeyboardEvent( "keydown", { "keyCode": 90 } ) );
-
-			}
-
-			function onSelectEnd() {
-
+		//					picoWindow.requestAnimationFrame = renderer.animation.getContext().requestAnimationFrame;
+		//					picoWindow.Browser.mainLoop.scheduler();
+			
+	} );
 			}
 
 			// Sets up the drawing canvas and adds it as the material map
@@ -229,22 +203,122 @@
 
 			}
 
+			let prevState = {
+				x: false,
+				y: false,
+				up: false,
+				down: false,
+				left: false,
+				right: false
+			};
+
+			function processInput() {
+
+				if ( controllerGrip2.children[ 0 ].motionController && controllerGrip1.children[ 0 ].motionController ) {
+
+					let x = controllerGrip1.children[ 0 ].motionController.components[ "a-button" ].values.state === MotionControllerConstants.ComponentState.PRESSED;
+					let y = controllerGrip1.children[ 0 ].motionController.components[ "b-button" ].values.state === MotionControllerConstants.ComponentState.PRESSED;
+
+					let axisX = controllerGrip2.children[ 0 ].motionController.components[ "xr-standard-thumbstick" ].values.xAxis;
+					let axisY = controllerGrip2.children[ 0 ].motionController.components[ "xr-standard-thumbstick" ].values.yAxis;
+
+					let right = axisX > 0.7;
+					let left = axisX < - 0.7;
+					let up = axisY > 0.7;
+					let down = axisY < - 0.7;
+
+			// z: 90
+			// x: 88
+			// up: 38
+			// down: 40
+			// left: 37
+			// right: 39
+
+
+					if ( up && ! prevState.up ) {
+						document.getElementById( "pico8" ).contentWindow.document.dispatchEvent( new KeyboardEvent( "keydown", { "keyCode": 38 } ) );
+					}
+					else if ( ! up && prevState.up ) {
+						document.getElementById( "pico8" ).contentWindow.document.dispatchEvent( new KeyboardEvent( "keyup", { "keyCode": 38 } ) );
+					}
+
+					if ( right && ! prevState.right ) {
+						document.getElementById( "pico8" ).contentWindow.document.dispatchEvent( new KeyboardEvent( "keydown", { "keyCode": 39 } ) );
+					}
+					else if ( ! right && prevState.right ) {
+						document.getElementById( "pico8" ).contentWindow.document.dispatchEvent( new KeyboardEvent( "keyup", { "keyCode": 39 } ) );
+					}
+
+					if ( left && ! prevState.left ) {
+						document.getElementById( "pico8" ).contentWindow.document.dispatchEvent( new KeyboardEvent( "keydown", { "keyCode": 37 } ) );
+					}
+					else if ( ! left && prevState.left ) {
+						document.getElementById( "pico8" ).contentWindow.document.dispatchEvent( new KeyboardEvent( "keyup", { "keyCode": 37 } ) );
+					}
+
+					if ( down && ! prevState.down ) {
+						document.getElementById( "pico8" ).contentWindow.document.dispatchEvent( new KeyboardEvent( "keydown", { "keyCode": 40 } ) );
+					}
+					else if ( ! down && prevState.down ) {
+						document.getElementById( "pico8" ).contentWindow.document.dispatchEvent( new KeyboardEvent( "keyup", { "keyCode": 40 } ) );
+					}
+
+
+
+					if ( x && ! prevState.x ) {
+						document.getElementById( "pico8" ).contentWindow.document.dispatchEvent( new KeyboardEvent( "keydown", { "keyCode": 88 } ) );
+					}
+					else if ( ! x && prevState.x ) {
+						document.getElementById( "pico8" ).contentWindow.document.dispatchEvent( new KeyboardEvent( "keyup", { "keyCode": 88 } ) );
+					}
+
+
+					if ( y && ! prevState.y ) {
+
+						document.getElementById( "pico8" ).contentWindow.document.dispatchEvent( new KeyboardEvent( "keydown", { "keyCode": 90 } ) );
+					}
+
+					else if ( ! y && prevState.y ) {
+
+						document.getElementById( "pico8" ).contentWindow.document.dispatchEvent( new KeyboardEvent( "keyup", { "keyCode": 90 } ) );
+					}
+
+					prevState.x = x;
+					prevState.y = y;
+					prevState.up = up;
+					prevState.left = left;
+					prevState.down = down;
+					prevState.right = right;
+
+	}
+/*
+				if (trigger.state === Constants.ComponentState.PRESSED) {
+					// Fire ray gun
+				} else if (trigger.state === Constants.ComponentState.TOUCHED) {
+					const chargeLevel = trigger.buttonValue;
+					// Show ray gun charging up
+				}
+				*/
+			}
 
 			var first = false;
 			function render() {
 
-				material.map.needsUpdate = true;
-				mesh.rotation.x += 0.01;
-				mesh.rotation.y += 0.01;
+				processInput();
 
-				renderer.render( scene, camera );								
-				if (renderer.xr.isPresenting && !first) {
+				material.map.needsUpdate = true;
+				mesh.rotation.y = Math.sin( performance.now() / 3000 ) / 3;
+
+				renderer.render( scene, camera );
+				if ( renderer.xr.isPresenting && ! first ) {
+
 					let picoWindow = document.getElementById( "pico8" ).contentWindow;
 					// picoWindow.requestAnimationFrame = renderer.animation.getContext().requestAnimationFrame;
 					picoWindow.Browser.mainLoop.runner();
 
 					// Browser.mainLoop.runner
-				}
+			
+	}
 
 			}
 
