@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>three.js webgl - materials - canvas texture</title>
+		<title>pico8</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<link type="text/css" rel="stylesheet" href="main.css">
@@ -71,6 +71,7 @@
 
 				controller1 = renderer.xr.getController( 0 );
 				controller1.addEventListener( 'selectstart', onSelectStart );
+				controller1.addEventListener( 'squeezestart', onSqueezeStart );
 				controller1.addEventListener( 'selectend', onSelectEnd );
 				controller1.addEventListener( 'connected', function ( event ) {
 
@@ -86,6 +87,7 @@
 
 				controller2 = renderer.xr.getController( 1 );
 				controller2.addEventListener( 'selectstart', onSelectStart );
+				controller2.addEventListener( 'squeezestart', onSqueezeStart );
 				controller2.addEventListener( 'selectend', onSelectEnd );
 				controller2.addEventListener( 'connected', function ( event ) {
 
@@ -126,9 +128,21 @@
 				});
 			}
 
+			// z: 90
+			// x: 88
+			// up: 38
+			// down: 40
+			// left: 37
+			// right: 39
 			function onSelectStart() {
 
 				document.getElementById( "pico8" ).contentWindow.document.dispatchEvent( new KeyboardEvent( "keydown", { "keyCode": 88 } ) );
+
+			}
+
+			function onSqueezeStart() {
+
+				document.getElementById( "pico8" ).contentWindow.document.dispatchEvent( new KeyboardEvent( "keydown", { "keyCode": 90 } ) );
 
 			}
 
@@ -223,8 +237,7 @@
 				mesh.rotation.x += 0.01;
 				mesh.rotation.y += 0.01;
 
-				renderer.render( scene, camera );
-								
+				renderer.render( scene, camera );								
 				if (renderer.xr.isPresenting && !first) {
 					let picoWindow = document.getElementById( "pico8" ).contentWindow;
 					// picoWindow.requestAnimationFrame = renderer.animation.getContext().requestAnimationFrame;
