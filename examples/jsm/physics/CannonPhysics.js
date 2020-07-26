@@ -179,6 +179,30 @@ function CannonPhysics() {
 
 	//
 
+	function updateBodyFromMesh( mesh, index = 0 ) {
+
+		if ( mesh.isInstancedMesh ) {
+
+			var bodies = meshMap.get( mesh );
+			bodies[ index ].position.copy( mesh.position );
+			bodies[ index ].quaternion.copy( mesh.quaternion );
+
+		} else if ( mesh.isMesh ) {
+
+			var body = meshMap.get( mesh );
+			if ( body ) {
+
+				body.position.copy( mesh.position );
+				body.quaternion.copy( mesh.quaternion );
+
+			}
+
+		}
+
+	}
+
+	//
+
 	var lastTime = 0;
 
 	function step() {
@@ -235,7 +259,8 @@ function CannonPhysics() {
 
 	return {
 		addMesh: addMesh,
-		setMeshPosition: setMeshPosition
+		setMeshPosition: setMeshPosition,
+		updateBodyFromMesh: updateBodyFromMesh
 		// addCompoundMesh
 	};
 

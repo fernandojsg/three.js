@@ -2,8 +2,15 @@ import {
 	Object3D,
 	SphereBufferGeometry,
 	MeshStandardMaterial,
-	Mesh
+	Mesh,
+	Vector3,
+	Quaternion
 } from "../../../build/three.module.js";
+
+import { GLTFLoader } from "../loaders/GLTFLoader.js";
+import { FBXLoader } from "../loaders/FBXLoader.js";
+
+const gltf = false;
 
 function XRHandModel( controller ) {
 
@@ -12,6 +19,9 @@ function XRHandModel( controller ) {
 	this.controller = controller;
 	this.envMap = null;
 
+	this.mesh = null;
+
+	/*
 	if ( window.XRHand ) {
 
 		var geometry = new SphereBufferGeometry( 1, 10, 10 );
@@ -34,6 +44,117 @@ function XRHandModel( controller ) {
 		}
 
 	}
+*/
+
+	this.bones = [];
+
+	if ( ! gltf ) {
+
+		var loader = new FBXLoader();
+		loader.load( '/examples/models/fbx/hand.fbx', object => {
+
+			const model = object; // object.scene.children[ 0 ];
+			model.scale.setScalar( 0.01 );
+
+			const bonesMapping = [
+				'handsb_r_hand', // XRHand.WRIST,
+
+				'handsb_r_thumb1', // XRHand.THUMB_METACARPAL,
+				'handsb_r_thumb2', // XRHand.THUMB_PHALANX_PROXIMAL,
+				'handsb_r_thumb3', // XRHand.THUMB_PHALANX_DISTAL,
+				'handsb_r_thumb_ignore', // XRHand.THUMB_PHALANX_TIP,
+
+				null,//'handsb_r_index1', // XRHand.INDEX_METACARPAL,
+				'handsb_r_index2', // XRHand.INDEX_PHALANX_PROXIMAL,
+				'handsb_r_index3', // XRHand.INDEX_PHALANX_INTERMEDIATE,
+				'handsb_r_index3', // XRHand.INDEX_PHALANX_DISTAL,
+				'handsb_r_index_ignore', // XRHand.INDEX_PHALANX_TIP,
+
+				null,//'handsb_r_middle1', // XRHand.MIDDLE_METACARPAL,
+				'handsb_r_middle2', // XRHand.MIDDLE_PHALANX_PROXIMAL,
+				'handsb_r_middle3', // XRHand.MIDDLE_PHALANX_INTERMEDIATE,
+				'handsb_r_middle3', // XRHand.MIDDLE_PHALANX_DISTAL,
+				'handsb_r_middle_ignore', // XRHand.MIDDLE_PHALANX_TIP,
+
+				null,//'handsb_r_ring1', // XRHand.RING_METACARPAL,
+				'handsb_r_ring2', // XRHand.RING_PHALANX_PROXIMAL,
+				'handsb_r_ring3', // XRHand.RING_PHALANX_INTERMEDIATE,
+				'handsb_r_ring3', // XRHand.RING_PHALANX_DISTAL,
+				'handsb_r_ring_ignore', // XRHand.RING_PHALANX_TIP,
+
+				'handsb_r_pinky0', // XRHand.LITTLE_METACARPAL,
+				'handsb_r_pinky1', // XRHand.LITTLE_PHALANX_PROXIMAL,
+				'handsb_r_pinky2', // XRHand.LITTLE_PHALANX_INTERMEDIATE,
+				'handsb_r_pinky3', // XRHand.LITTLE_PHALANX_DISTAL,
+				'handsb_r_pinky_ignore', // XRHand.LITTLE_PHALANX_TIP
+			];
+
+			bonesMapping.forEach( boneName => {
+
+				const bone = model.getObjectByName( boneName );
+				this.bones.push( bone );
+
+			} );
+
+			//model.children[0].scale.setScalar(0.01);
+			window.model = model;
+			this.add( model );
+
+		} );
+
+	} else {
+
+		var loader = new GLTFLoader();
+		loader.load( '/examples/models/gltf/XRHandRightv6.glb', object => {
+
+			const model = object.scene.children[ 0 ];
+
+			const bonesMapping = [
+				'WRIST',
+
+				'THUMB_METACARPAL',
+				'THUMB_PHALANX_PROXIMAL',
+				'THUMB_PHALANX_DISTAL',
+				'THUMB_PHALANX_TIP',
+
+				'INDEX_METACARPAL',
+				'INDEX_PHALANX_PROXIMAL',
+				'INDEX_PHALANX_INTERMEDIATE',
+				'INDEX_PHALANX_DISTAL',
+				'INDEX_PHALANX_TIP',
+
+				'MIDDLE_METACARPAL',
+				'MIDDLE_PHALANX_PROXIMAL',
+				'MIDDLE_PHALANX_INTERMEDIATE',
+				'MIDDLE_PHALANX_DISTAL',
+				'MIDDLE_PHALANX_TIP',
+
+				'RING_METACARPAL',
+				'RING_PHALANX_PROXIMAL',
+				'RING_PHALANX_INTERMEDIATE',
+				'RING_PHALANX_DISTAL',
+				'RING_PHALANX_TIP',
+
+				'LITTLE_METACARPAL',
+				'LITTLE_PHALANX_PROXIMAL',
+				'LITTLE_PHALANX_INTERMEDIATE',
+				'LITTLE_PHALANX_DISTAL',
+				'LITTLE_PHALANX_TIP'
+			];
+
+			bonesMapping.forEach( boneName => {
+
+				const bone = model.getObjectByName( boneName );
+				this.bones.push( bone );
+
+			} );
+
+			window.model = model;
+			this.add( model );
+
+		} );
+
+	}
 
 }
 
@@ -52,25 +173,78 @@ XRHandModel.prototype = Object.assign( Object.create( Object3D.prototype ), {
 	updateMesh: function () {
 
 		const defaultRadius = 0.008;
+		const limit = 30;
 
 		// XR Joints
 		const XRJoints = this.controller.joints;
+		for ( var i = 0; i < this.bones.length; i ++ ) {
+
+			const bone = this.bones[ i ];
+			const XRJoint = XRJoints[ i ];
+
+			if ( XRJoint ) {
+
+				if ( XRJoint.visible ) {
+
+					let position = XRJoint.position;
+
+					if (bone) {
+						bone.position.copy( position.clone().multiplyScalar(100) );
+
+						bone.quaternion.copy( XRJoint.quaternion );
+						if (i===0) {
+
+						} else if (i === 20) {
+							
+						}
+
+						//let quaternion = new Quaternion().setFromAxisAngle( {x:0, y:1, z:0}, Math.PI/2 );
+/*
+						let quaternion = new Quaternion().setFromAxisAngle( {x:0, y:1, z:0}, Math.PI );
+						bone.quaternion.multiply(quaternion);
+						quaternion = new Quaternion().setFromAxisAngle( {x:1, y:0, z:0}, -Math.PI/2 );
+						bone.quaternion.multiply(quaternion);
+						*/
+				}
+
+					//bone.scale.setScalar( XRJoint.jointRadius || defaultRadius );
+
+				}
+
+				// bone.visible = XRJoint.visible;
+
+			}
+
+			if ( i >= limit ) {
+
+				return;
+
+			}
+
+		}
+
+		/*
 		for ( var i = 0; i < this.children.length; i ++ ) {
 
 			const jointMesh = this.children[ i ];
 			const XRJoint = XRJoints[ i ];
 
-			if ( XRJoint.visible ) {
+			if ( XRJoint ) {
 
-				jointMesh.position.copy( XRJoint.position );
-				jointMesh.quaternion.copy( XRJoint.quaternion );
-				jointMesh.scale.setScalar( XRJoint.jointRadius || defaultRadius );
+				if ( XRJoint.visible ) {
+
+					jointMesh.position.copy( XRJoint.position );
+					jointMesh.quaternion.copy( XRJoint.quaternion );
+					jointMesh.scale.setScalar( XRJoint.jointRadius || defaultRadius );
+
+				}
+
+				jointMesh.visible = XRJoint.visible;
 
 			}
 
-			jointMesh.visible = XRJoint.visible;
-
 		}
+*/
 
 	}
 } );
