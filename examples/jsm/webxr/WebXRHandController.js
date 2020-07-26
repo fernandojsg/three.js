@@ -57,6 +57,40 @@ function XRHandModel( controller ) {
 			model.scale.setScalar( 0.01 );
 
 			const bonesMapping = [
+				'b_r_wrist', // XRHand.WRIST,
+
+				'b_r_thumb0', // XRHand.THUMB_METACARPAL,
+				'b_r_thumb1', // XRHand.THUMB_PHALANX_PROXIMAL,
+				'b_r_thumb2', // XRHand.THUMB_PHALANX_DISTAL,
+				'b_r_thumb3', // XRHand.THUMB_PHALANX_TIP,
+
+				'b_r_index1', // XRHand.INDEX_METACARPAL,
+				'b_r_index2', // XRHand.INDEX_PHALANX_PROXIMAL,
+				'b_r_index3', // XRHand.INDEX_PHALANX_INTERMEDIATE,
+				'b_r_index3', // XRHand.INDEX_PHALANX_DISTAL,
+				'b_r_index_null', // XRHand.INDEX_PHALANX_TIP,
+
+				'b_r_middle1', // XRHand.MIDDLE_METACARPAL,
+				'b_r_middle2', // XRHand.MIDDLE_PHALANX_PROXIMAL,
+				'b_r_middle3', // XRHand.MIDDLE_PHALANX_INTERMEDIATE,
+				'b_r_middle3', // XRHand.MIDDLE_PHALANX_DISTAL,
+				'b_r_middlenull', // XRHand.MIDDLE_PHALANX_TIP,
+
+				'b_r_ring1', // XRHand.RING_METACARPAL,
+				'b_r_ring2', // XRHand.RING_PHALANX_PROXIMAL,
+				'b_r_ring3', // XRHand.RING_PHALANX_INTERMEDIATE,
+				'b_r_ring3', // XRHand.RING_PHALANX_DISTAL,
+				'b_r_ring_inull', // XRHand.RING_PHALANX_TIP,
+
+				'b_r_pinky0', // XRHand.LITTLE_METACARPAL,
+				'b_r_pinky1', // XRHand.LITTLE_PHALANX_PROXIMAL,
+				'b_r_pinky2', // XRHand.LITTLE_PHALANX_INTERMEDIATE,
+				'b_r_pinky3', // XRHand.LITTLE_PHALANX_DISTAL,
+				'b_r_pinky_null', // XRHand.LITTLE_PHALANX_TIP
+			];
+
+/*
+			const bonesMapping = [
 				'handsb_r_hand', // XRHand.WRIST,
 
 				'handsb_r_thumb1', // XRHand.THUMB_METACARPAL,
@@ -88,7 +122,7 @@ function XRHandModel( controller ) {
 				'handsb_r_pinky3', // XRHand.LITTLE_PHALANX_DISTAL,
 				'handsb_r_pinky_ignore', // XRHand.LITTLE_PHALANX_TIP
 			];
-
+*/
 			bonesMapping.forEach( boneName => {
 
 				const bone = model.getObjectByName( boneName );
@@ -189,15 +223,34 @@ XRHandModel.prototype = Object.assign( Object.create( Object3D.prototype ), {
 					let position = XRJoint.position;
 
 					if (bone) {
-						bone.position.copy( position.clone().multiplyScalar(100) );
 
+						bone.position.copy( position.clone().multiplyScalar(100) );
 						bone.quaternion.copy( XRJoint.quaternion );
+/*
 						if (i===0) {
+							let offsetRotation = new Quaternion();
+							var handModelOrientation = Math.PI;
+							offsetRotation.setFromAxisAngle(new THREE.Vector3(0,0,1).normalize(), handModelOrientation);
+
+							var offsetRotationY = new Quaternion();
+							offsetRotationY.setFromAxisAngle(new THREE.Vector3(1,0,0).normalize(), Math.PI / 2);
+							offsetRotation = offsetRotation.multiply(offsetRotationY);
+
+							bone.quaternion.multiply(offsetRotation);
+
+							bone.quaternion.multiply(quaternion);
+							quaternion = new Quaternion().setFromAxisAngle( {x:1, y:0, z:0}, -Math.PI/2 );
+							bone.quaternion.multiply(quaternion);
 
 						} else if (i === 20) {
-							
-						}
 
+							var offsetRotation = new Quaternion();
+							var handModelOrientation = Math.PI;
+							offsetRotationY.setFromAxisAngle(new Vector3(0,0,1).normalize(), handModelOrientation);
+							bone.quaternion.multiply(offsetRotation);
+
+						}
+*/
 						//let quaternion = new Quaternion().setFromAxisAngle( {x:0, y:1, z:0}, Math.PI/2 );
 /*
 						let quaternion = new Quaternion().setFromAxisAngle( {x:0, y:1, z:0}, Math.PI );
