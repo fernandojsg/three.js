@@ -23,7 +23,7 @@
 			import { GLTFLoader } from './jsm/loaders/GLTFLoader.js';
 
 			var container;
-			var watch;
+			var piano;
 			var camera, scene, renderer;
 			var hand1, hand2;
 			var controller1, controller2;
@@ -83,59 +83,8 @@
 
 				let gltfLoader = new GLTFLoader();
 				var loader = new GLTFLoader();
-				/*
-				loader.load( '/examples/models/gltf/watch.glb', object => {
 
-					watch = object.scene;
-					watch.position.z = - 5;
-					watch.position.y = 1;
-					watch.rotation.y = 3;
-					scene.add( watch );
 
-					const canvas = document.createElement( 'canvas' );
-					const ctx = canvas.getContext( '2d' );
-					contextt = ctx;
-					ctx.canvas.width = 512;
-					ctx.canvas.height = 512;
-					ctx.fillStyle = '#000';
-					//ctx.fillRect( 0, 0, ctx.canvas.width, ctx.canvas.height );
-
-					function randInt( min, max ) {
-
-						if ( max === undefined ) {
-
-							max = min;
-							min = 0;
-
-						}
-						return Math.random() * ( max - min ) + min | 0;
-
-					}
-
-					function drawRandomDot() {
-
-						ctx.fillStyle = `#${randInt( 0x1000000 ).toString( 16 ).padStart( 6, '0' )}`;
-						ctx.beginPath();
-
-						const x = randInt( 256 );
-						const y = randInt( 256 );
-						const radius = randInt( 10, 64 );
-						ctx.arc( x, y, radius, 0, Math.PI * 2 );
-						ctx.fill();
-
-					}
-					document.body.appendChild( canvas );
-					//for (var i=0;i<20;i++) drawRandomDot();
-
-					texture = new THREE.CanvasTexture( ctx.canvas );
-
-					watch.children[ 1 ].material.map = texture;
-					texture.needsUpdate = true;
-
-					window.watch = watch;
-
-				} );
-*/
 				//
 
 				renderer = new THREE.WebGLRenderer( { antialias: true } );
@@ -181,46 +130,6 @@
 				hand2.add( handModelFactory.createHandModel( hand2 ) );
 				scene.add( hand2 );
 
-
-				let group = new THREE.Group();
-				scene.add( group );
-
-				var geometries = [
-					new THREE.BoxBufferGeometry( 0.2, 0.2, 0.2 ),
-					new THREE.ConeBufferGeometry( 0.2, 0.2, 64 ),
-					new THREE.CylinderBufferGeometry( 0.2, 0.2, 0.2, 64 ),
-					new THREE.IcosahedronBufferGeometry( 0.2, 3 ),
-					new THREE.TorusBufferGeometry( 0.2, 0.04, 64, 32 )
-				];
-
-				for ( var i = 0; i < 50; i ++ ) {
-
-					var geometry = geometries[ Math.floor( Math.random() * geometries.length ) ];
-					var material = new THREE.MeshStandardMaterial( {
-						color: Math.random() * 0xffffff,
-						roughness: 0.7,
-						metalness: 0.0
-					} );
-
-					var object = new THREE.Mesh( geometry, material );
-
-					object.position.x = Math.random() * 4 - 2;
-					object.position.y = Math.random() * 2;
-					object.position.z = Math.random() * 4 - 2;
-
-					object.rotation.x = Math.random() * 2 * Math.PI;
-					object.rotation.y = Math.random() * 2 * Math.PI;
-					object.rotation.z = Math.random() * 2 * Math.PI;
-
-					object.scale.setScalar( Math.random() + 0.5 );
-
-					object.castShadow = true;
-					object.receiveShadow = true;
-
-					group.add( object );
-
-				}
-
 				//
 
 				var geometry = new THREE.BufferGeometry().setFromPoints( [ new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, - 1 ) ] );
@@ -255,6 +164,7 @@
 			}
 
 			function render() {
+
 				/*
 				if (contextt) {
 					let canvass = stats.dom.querySelector("canvas");

@@ -4,23 +4,228 @@ import {
 	MeshStandardMaterial,
 	Mesh,
 	Vector3,
+	CanvasTexture,
 	Quaternion
 } from "../../../build/three.module.js";
+
+import * as THREE from "../../../build/three.module.js";
 
 import { GLTFLoader } from "../loaders/GLTFLoader.js";
 import { FBXLoader } from "../loaders/FBXLoader.js";
 
 const gltf = false;
 
+class OculusMeshHand {
+
+	constructor( controller, handedness ) {
+
+		this.controller = controller;
+		this.bones = [];
+		var loader = new FBXLoader();
+
+		loader.load( `/examples/models/fbx/OculusHand_${handedness === "right" ? "R" : "L"}.fbx`, object => {
+
+			this.controller.add( object );
+			object.scale.setScalar( 0.01 );
+			object.frustumCulled = false;
+
+			const bonesMapping = [
+				'b_%_wrist', // XRHand.WRIST,
+
+				'b_%_thumb1', // XRHand.THUMB_METACARPAL,
+				'b_%_thumb2', // XRHand.THUMB_PHALANX_PROXIMAL,
+				'b_%_thumb3', // XRHand.THUMB_PHALANX_DISTAL,
+				'b_%_thumb_null', // XRHand.THUMB_PHALANX_TIP,
+
+				null, //'b_%_index1', // XRHand.INDEX_METACARPAL,
+				'b_%_index1', // XRHand.INDEX_PHALANX_PROXIMAL,
+				'b_%_index2', // XRHand.INDEX_PHALANX_INTERMEDIATE,
+				'b_%_index3', // XRHand.INDEX_PHALANX_DISTAL,
+				'b_%_index_null', // XRHand.INDEX_PHALANX_TIP,
+
+				null, //'b_%_middle1', // XRHand.MIDDLE_METACARPAL,
+				'b_%_middle1', // XRHand.MIDDLE_PHALANX_PROXIMAL,
+				'b_%_middle2', // XRHand.MIDDLE_PHALANX_INTERMEDIATE,
+				'b_%_middle3', // XRHand.MIDDLE_PHALANX_DISTAL,
+				'b_%_middlenull', // XRHand.MIDDLE_PHALANX_TIP,
+
+				null, //'b_%_ring1', // XRHand.RING_METACARPAL,
+				'b_%_ring1', // XRHand.RING_PHALANX_PROXIMAL,
+				'b_%_ring2', // XRHand.RING_PHALANX_INTERMEDIATE,
+				'b_%_ring3', // XRHand.RING_PHALANX_DISTAL,
+				'b_%_ring_inull', // XRHand.RING_PHALANX_TIP,
+
+				'b_%_pinky0', // XRHand.LITTLE_METACARPAL,
+				'b_%_pinky1', // XRHand.LITTLE_PHALANX_PROXIMAL,
+				'b_%_pinky2', // XRHand.LITTLE_PHALANX_INTERMEDIATE,
+				'b_%_pinky3', // XRHand.LITTLE_PHALANX_DISTAL,
+				'b_%_pinkynull', // XRHand.LITTLE_PHALANX_TIP
+			];
+			bonesMapping.forEach( boneName => {
+
+				if ( boneName ) {
+
+					const bone = object.getObjectByName( boneName.replace( "%", handedness === "right" ? "r" : "l" ) );
+					this.bones.push( bone );
+
+				} else {
+
+					this.bones.push( null );
+
+				}
+
+			} );
+
+			var loader2 = new GLTFLoader();
+			loader2.load( '/examples/models/gltf/watch.glb', object => {
+
+				if ( handedness === "left" ) {
+
+					let watch = object.scene;
+					window.watch = watch;
+					watch.rotation.y = - 0.2;
+					watch.rotation.x = - 1.6;
+					watch.scale.set( 0.02, 0.015, 0.015 );
+					this.controller.joints[ 0 ].add( watch );
+
+
+					const canvas = document.createElement( 'canvas' );
+					const ctx = canvas.getContext( '2d' );
+					this.watchContext = ctx;
+					ctx.canvas.width = 512;
+					ctx.canvas.height = 512;
+					ctx.fillStyle = '#000';
+					//ctx.fillRect( 0, 0, ctx.canvas.width, ctx.canvas.height );
+					document.body.appendChild( canvas );
+					//for (var i=0;i<20;i++) drawRandomDot();
+
+					this.watchTexture = new CanvasTexture( ctx.canvas );
+					this.watchTexture.minFilter = THREE.LinearFilter;
+					this.watchTexture.magFilter = THREE.LinearFilter;
+
+
+					watch.children[ 1 ].material.map = this.watchTexture;
+					this.watchTexture.needsUpdate = true;
+
+				}
+
+			} );
+
+
+		} );
+
+	}
+
+	updateMesh() {
+
+		const defaultRadius = 0.008;
+		const limit = 30;
+
+		// XR Joints
+		const XRJoints = this.controller.joints;
+		for ( var i = 0; i < this.bones.length; i ++ ) {
+
+			const bone = this.bones[ i ];
+			const XRJoint = XRJoints[ i ];
+
+			if ( XRJoint ) {
+
+				if ( XRJoint.visible ) {
+
+					let position = XRJoint.position;
+
+					if ( bone ) {
+
+						bone.position.copy( position.clone().multiplyScalar( 100 ) );
+						bone.quaternion.copy( XRJoint.quaternion );
+						// bone.scale.setScalar( XRJoint.jointRadius || defaultRadius );
+
+					}
+
+				}
+
+
+			}
+
+			if ( i >= limit ) {
+
+				return;
+
+			}
+
+		}
+
+		// WATCH
+		let canvass = stats.dom.querySelector( "canvas" );
+		const ctx = this.watchContext;
+		if ( ! ctx ) {
+
+			return;
+
+		}
+		ctx.fillStyle = "#000000";
+		ctx.fillRect( 0, 0, ctx.canvas.width, ctx.canvas.height );
+		ctx.drawImage( canvass, 0, 0, 512, 360 );
+
+		ctx.fillStyle = "#ffffff";
+		ctx.font = "20px Impact";
+		//ctx.fillText("Hello World!", 10, 50);
+		ctx.textAlign = "center";
+
+		var gradient = ctx.createLinearGradient( 0, 0, canvass.width, 0 );
+		gradient.addColorStop( "0", " #0000ff" );
+		gradient.addColorStop( "0.5", "#2222ff" );
+		gradient.addColorStop( "1.0", "#5555ff" );
+		ctx.fillStyle = gradient;
+		const d = new Date();
+		const h = d.getHours() < 10 ? "0" + d.getHours() : d.getHours();
+		const m = d.getMinutes() < 10 ? "0" + d.getMinutes() : d.getMinutes();
+		const s = d.getSeconds() < 10 ? "0" + d.getSeconds() : d.getSeconds();
+		ctx.font = "120px Verdana";
+		ctx.fillText( h + ":" + m + ":" + s, canvass.width / 2 + 220, 470 );
+
+		this.watchTexture.needsUpdate = true;
+
+
+		/*
+		for ( var i = 0; i < this.children.length; i ++ ) {
+
+			const jointMesh = this.children[ i ];
+			const XRJoint = XRJoints[ i ];
+
+			if ( XRJoint ) {
+
+				if ( XRJoint.visible ) {
+
+					jointMesh.position.copy( XRJoint.position );
+					jointMesh.quaternion.copy( XRJoint.quaternion );
+					jointMesh.scale.setScalar( XRJoint.jointRadius || defaultRadius );
+
+				}
+
+				jointMesh.visible = XRJoint.visible;
+
+			}
+
+		}
+*/
+
+	}
+
+}
+
+
 function XRHandModel( controller ) {
 
 	Object3D.call( this );
 
 	this.controller = controller;
+	this.motionController = null;
 	this.envMap = null;
 
 	this.mesh = null;
 
+	return;
 	/*
 	if ( window.XRHand ) {
 
@@ -51,45 +256,13 @@ function XRHandModel( controller ) {
 	if ( ! gltf ) {
 
 		var loader = new FBXLoader();
-		loader.load( '/examples/models/fbx/hand.fbx', object => {
+		loader.load( '/examples/models/fbx/OculusHand_L.fbx', object => {
 
 			const model = object; // object.scene.children[ 0 ];
 			model.scale.setScalar( 0.01 );
 
-			const bonesMapping = [
-				'b_r_wrist', // XRHand.WRIST,
 
-				'b_r_thumb0', // XRHand.THUMB_METACARPAL,
-				'b_r_thumb1', // XRHand.THUMB_PHALANX_PROXIMAL,
-				'b_r_thumb2', // XRHand.THUMB_PHALANX_DISTAL,
-				'b_r_thumb3', // XRHand.THUMB_PHALANX_TIP,
-
-				'b_r_index1', // XRHand.INDEX_METACARPAL,
-				'b_r_index2', // XRHand.INDEX_PHALANX_PROXIMAL,
-				'b_r_index3', // XRHand.INDEX_PHALANX_INTERMEDIATE,
-				'b_r_index3', // XRHand.INDEX_PHALANX_DISTAL,
-				'b_r_index_null', // XRHand.INDEX_PHALANX_TIP,
-
-				'b_r_middle1', // XRHand.MIDDLE_METACARPAL,
-				'b_r_middle2', // XRHand.MIDDLE_PHALANX_PROXIMAL,
-				'b_r_middle3', // XRHand.MIDDLE_PHALANX_INTERMEDIATE,
-				'b_r_middle3', // XRHand.MIDDLE_PHALANX_DISTAL,
-				'b_r_middlenull', // XRHand.MIDDLE_PHALANX_TIP,
-
-				'b_r_ring1', // XRHand.RING_METACARPAL,
-				'b_r_ring2', // XRHand.RING_PHALANX_PROXIMAL,
-				'b_r_ring3', // XRHand.RING_PHALANX_INTERMEDIATE,
-				'b_r_ring3', // XRHand.RING_PHALANX_DISTAL,
-				'b_r_ring_inull', // XRHand.RING_PHALANX_TIP,
-
-				'b_r_pinky0', // XRHand.LITTLE_METACARPAL,
-				'b_r_pinky1', // XRHand.LITTLE_PHALANX_PROXIMAL,
-				'b_r_pinky2', // XRHand.LITTLE_PHALANX_INTERMEDIATE,
-				'b_r_pinky3', // XRHand.LITTLE_PHALANX_DISTAL,
-				'b_r_pinky_null', // XRHand.LITTLE_PHALANX_TIP
-			];
-
-/*
+			/*
 			const bonesMapping = [
 				'handsb_r_hand', // XRHand.WRIST,
 
@@ -139,6 +312,7 @@ function XRHandModel( controller ) {
 	} else {
 
 		var loader = new GLTFLoader();
+
 		loader.load( '/examples/models/gltf/XRHandRightv6.glb', object => {
 
 			const model = object.scene.children[ 0 ];
@@ -200,106 +374,13 @@ XRHandModel.prototype = Object.assign( Object.create( Object3D.prototype ), {
 
 		Object3D.prototype.updateMatrixWorld.call( this, force );
 
-		this.updateMesh();
+		if ( this.motionController ) {
+
+			this.motionController.updateMesh();
+
+		}
 
 	},
-
-	updateMesh: function () {
-
-		const defaultRadius = 0.008;
-		const limit = 30;
-
-		// XR Joints
-		const XRJoints = this.controller.joints;
-		for ( var i = 0; i < this.bones.length; i ++ ) {
-
-			const bone = this.bones[ i ];
-			const XRJoint = XRJoints[ i ];
-
-			if ( XRJoint ) {
-
-				if ( XRJoint.visible ) {
-
-					let position = XRJoint.position;
-
-					if (bone) {
-
-						bone.position.copy( position.clone().multiplyScalar(100) );
-						bone.quaternion.copy( XRJoint.quaternion );
-/*
-						if (i===0) {
-							let offsetRotation = new Quaternion();
-							var handModelOrientation = Math.PI;
-							offsetRotation.setFromAxisAngle(new THREE.Vector3(0,0,1).normalize(), handModelOrientation);
-
-							var offsetRotationY = new Quaternion();
-							offsetRotationY.setFromAxisAngle(new THREE.Vector3(1,0,0).normalize(), Math.PI / 2);
-							offsetRotation = offsetRotation.multiply(offsetRotationY);
-
-							bone.quaternion.multiply(offsetRotation);
-
-							bone.quaternion.multiply(quaternion);
-							quaternion = new Quaternion().setFromAxisAngle( {x:1, y:0, z:0}, -Math.PI/2 );
-							bone.quaternion.multiply(quaternion);
-
-						} else if (i === 20) {
-
-							var offsetRotation = new Quaternion();
-							var handModelOrientation = Math.PI;
-							offsetRotationY.setFromAxisAngle(new Vector3(0,0,1).normalize(), handModelOrientation);
-							bone.quaternion.multiply(offsetRotation);
-
-						}
-*/
-						//let quaternion = new Quaternion().setFromAxisAngle( {x:0, y:1, z:0}, Math.PI/2 );
-/*
-						let quaternion = new Quaternion().setFromAxisAngle( {x:0, y:1, z:0}, Math.PI );
-						bone.quaternion.multiply(quaternion);
-						quaternion = new Quaternion().setFromAxisAngle( {x:1, y:0, z:0}, -Math.PI/2 );
-						bone.quaternion.multiply(quaternion);
-						*/
-				}
-
-					//bone.scale.setScalar( XRJoint.jointRadius || defaultRadius );
-
-				}
-
-				// bone.visible = XRJoint.visible;
-
-			}
-
-			if ( i >= limit ) {
-
-				return;
-
-			}
-
-		}
-
-		/*
-		for ( var i = 0; i < this.children.length; i ++ ) {
-
-			const jointMesh = this.children[ i ];
-			const XRJoint = XRJoints[ i ];
-
-			if ( XRJoint ) {
-
-				if ( XRJoint.visible ) {
-
-					jointMesh.position.copy( XRJoint.position );
-					jointMesh.quaternion.copy( XRJoint.quaternion );
-					jointMesh.scale.setScalar( XRJoint.jointRadius || defaultRadius );
-
-				}
-
-				jointMesh.visible = XRJoint.visible;
-
-			}
-
-		}
-*/
-
-	}
 } );
 
 
@@ -311,7 +392,7 @@ var XRHandModelFactory = ( function () {
 
 		constructor: XRHandModelFactory,
 
-		createHandModel: function ( controller ) {
+		createHandModel: function ( controller, profile ) {
 
 			const handModel = new XRHandModel( controller );
 			let scene = null;
@@ -321,9 +402,20 @@ var XRHandModelFactory = ( function () {
 				const xrInputSource = event.data;
 				console.log( "Connected!", xrInputSource );
 
-				if ( xrInputSource.hand ) {
+				if ( xrInputSource.hand && ! handModel.motionController ) {
 
+					handModel.visible = true;
 					handModel.xrInputSource = xrInputSource;
+
+					if ( xrInputSource.handedness === 'any' ) {
+					} else {
+
+						handModel.motionController = new OculusMeshHand( controller, xrInputSource.handedness );
+
+					}
+
+					// profile ?
+
 
 				}
 
@@ -331,8 +423,8 @@ var XRHandModelFactory = ( function () {
 
 			controller.addEventListener( 'disconnected', () => {
 
-				handModel.motionController = null;
-				handModel.remove( scene );
+				handModel.visible = false;
+				//handModel.remove( scene );
 				scene = null;
 
 			} );
